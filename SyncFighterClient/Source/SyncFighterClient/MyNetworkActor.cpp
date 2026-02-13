@@ -6,6 +6,7 @@
 #include "SyncFighterStructs.h" // 패킷 구조체 정의 포함
 #include "Components/WidgetComponent.h"
 #include "UI/SFHPBarWidget.h"
+#include "Player/SFCharacter.h"
 
 // Sets default values
 AMyNetworkActor::AMyNetworkActor()
@@ -31,27 +32,27 @@ void AMyNetworkActor::Tick(float DeltaTime)
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI == nullptr) return;
 
-	// --- [0. 공격 테스트 (마우스 왼쪽 클릭)] ---
-	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	//// --- [0. 공격 테스트 (마우스 왼쪽 클릭)] ---
+	//APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
-	if (PC && PC->WasInputKeyJustPressed(EKeys::LeftMouseButton))
-	{
-		PacketPlayerAttack AttackPacket;
-		AttackPacket.Size = sizeof(PacketPlayerAttack);
-		AttackPacket.ID = C_TO_S_PLAYER_ATTACK;
-		AttackPacket.PlayerID = 0;
+	//if (PC && PC->WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	//{
+	//	PacketPlayerAttack AttackPacket;
+	//	AttackPacket.Size = sizeof(PacketPlayerAttack);
+	//	AttackPacket.ID = C_TO_S_PLAYER_ATTACK;
+	//	AttackPacket.PlayerID = 0;
 
-		// [수정] BytesSent 변수 제거, 크기만 전달
-		GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
+	//	// [수정] BytesSent 변수 제거, 크기만 전달
+	//	GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
 
-		UE_LOG(LogTemp, Warning, TEXT("공격 패킷 전송!"));
+	//	UE_LOG(LogTemp, Warning, TEXT("공격 패킷 전송!"));
 
-		ACharacter* MyCharacter = Cast<ACharacter>(PC->GetPawn());
-		if (MyCharacter && AttackMontage)
-		{
-			MyCharacter->PlayAnimMontage(AttackMontage);
-		}
-	}
+	//	ACharacter* MyCharacter = Cast<ACharacter>(PC->GetPawn());
+	//	if (MyCharacter && AttackMontage)
+	//	{
+	//		MyCharacter->PlayAnimMontage(AttackMontage);
+	//	}
+	//}
 
 	// --- [1. 이동 패킷 보내기 (Send)] --- 
 	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
@@ -125,17 +126,17 @@ void AMyNetworkActor::Tick(float DeltaTime)
 				else
 				{
 					// 신규 유저 소환
-					if (DummyCharacterClass)
+					if (RemoteCharacterClass)
 					{
 						FVector SpawnLoc(Packet->X, Packet->Y, Packet->Z);
 						FRotator SpawnRot(0, Packet->Yaw, 0);
 						FActorSpawnParameters SpawnParams;
-						AActor* NewActor = GetWorld()->SpawnActor<AActor>(DummyCharacterClass, SpawnLoc, SpawnRot, SpawnParams);
+						ASFCharacter* NewActor = GetWorld()->SpawnActor<ASFCharacter>(RemoteCharacterClass, SpawnLoc, SpawnRot, SpawnParams);
 
 						if (NewActor)
 						{
 							FRemotePlayerInfo NewInfo;
-							NewInfo.Actor = NewActor;
+							NewInfo.Character = NewActor;
 							NewInfo.TargetPos = SpawnLoc;
 							NewInfo.TargetRot = SpawnRot;
 							RemotePlayers.Add(Packet->PlayerID, NewInfo);
@@ -159,10 +160,10 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					FRemotePlayerInfo& Info = RemotePlayers[AttackPkt->PlayerID];
 					UE_LOG(LogTemp, Warning, TEXT("[User %d] 공격 시전!"), AttackPkt->PlayerID);
 
-					ACharacter* Character = Cast<ACharacter>(Info.Actor);
-					if (Character && AttackMontage)
+					ASFCharacter* Character = Info.Character;
+					if (Character)
 					{
-						Character->PlayAnimMontage(AttackMontage);
+						Character->ProcessAttack();
 					}
 				}
 			}
@@ -170,106 +171,43 @@ void AMyNetworkActor::Tick(float DeltaTime)
 			{
 				PacketDamage* DmgPkt = (PacketDamage*)(Buffer + ProcessedBytes);
 
-				// 1. 대상 찾기 & 상태값 가져오기
-				AActor* VictimActor = nullptr;
-				bool* bIsVictimDeadPtr = nullptr; // 죽음 상태를 가리킬 포인터
-
+				// 1. 대상 찾기
+				ASFCharacter* TargetChar = nullptr;
 				if (DmgPkt->VictimID == GI->MyPlayerID)
 				{
 					// 나 자신
-					VictimActor = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-					bIsVictimDeadPtr = &bIsMyPlayerDead; // 내 상태 변수 주소
+					TargetChar = Cast<ASFCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 				}
 				else if (RemotePlayers.Contains(DmgPkt->VictimID))
 				{
 					// 적
-					VictimActor = RemotePlayers[DmgPkt->VictimID].Actor;
-					bIsVictimDeadPtr = &RemotePlayers[DmgPkt->VictimID].bIsDead; // 적 상태 변수 주소
+					TargetChar = Cast<ASFCharacter>(RemotePlayers[DmgPkt->VictimID].Character);
 				}
 
-				if (VictimActor)
+				if (TargetChar)
 				{
-					// --- [A] HP바 갱신 (기존 코드 유지) ---
-					UWidgetComponent* WidgetComp = VictimActor->FindComponentByClass<UWidgetComponent>();
-					if (WidgetComp)
-					{
-						USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(WidgetComp->GetUserWidgetObject());
-						if (HPWidget)
-						{
-							HPWidget->UpdateHP((float)DmgPkt->RemainingHP, 100.0f);
-						}
-					}
-
-					// --- [B] ★ 죽음 처리 (추가됨) ---
-					// HP가 0 이하이고, 아직 죽은 상태가 아니라면?
-					if (DmgPkt->RemainingHP <= 0 && bIsVictimDeadPtr && *bIsVictimDeadPtr == false)
-					{
-						// 1. 죽음 플래그 ON
-						*bIsVictimDeadPtr = true;
-
-						// 2. 사망 애니메이션 재생 (ACharacter로 캐스팅 필요)
-						ACharacter* VicChar = Cast<ACharacter>(VictimActor);
-						if (VicChar && DeathMontage)
-						{
-							VicChar->PlayAnimMontage(DeathMontage);
-						}
-
-						// 3. 내 캐릭터라면 입력 막기
-						if (VictimActor == UGameplayStatics::GetPlayerPawn(GetWorld(), 0))
-						{
-							if (PC) PC->DisableInput(PC);
-
-							UE_LOG(LogTemp, Error, TEXT("GAME OVER! You Died."));
-						}
-					}
-
-					UE_LOG(LogTemp, Warning, TEXT("User %d HP Updated: %d"), DmgPkt->VictimID, DmgPkt->RemainingHP);
+					TargetChar->ProcessDamage(DmgPkt->RemainingHP);
 				}
 			}
 			else if (Header->ID == S_TO_C_RESPAWN) // 4번
 			{
 				PacketRespawn* ResPkt = (PacketRespawn*)(Buffer + ProcessedBytes);
 
-				AActor* TargetActor = nullptr;
-				bool* bIsTargetDeadPtr = nullptr;
-
+				ASFCharacter* TargetChar = nullptr;
 				if (ResPkt->PlayerID == GI->MyPlayerID)
 				{
-					TargetActor = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-					bIsTargetDeadPtr = &bIsMyPlayerDead;
+					// 나 자신
+					TargetChar = Cast<ASFCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 				}
 				else if (RemotePlayers.Contains(ResPkt->PlayerID))
 				{
-					TargetActor = RemotePlayers[ResPkt->PlayerID].Actor;
-					bIsTargetDeadPtr = &RemotePlayers[ResPkt->PlayerID].bIsDead;
+					// 적
+					TargetChar = Cast<ASFCharacter>(RemotePlayers[ResPkt->PlayerID].Character);
 				}
 
-				if (TargetActor)
+				if (TargetChar)
 				{
-					// 1. 위치 이동
-					TargetActor->SetActorLocation(FVector(ResPkt->X, ResPkt->Y, ResPkt->Z));
-
-					// 2. 죽음 상태 해제
-					if (bIsTargetDeadPtr) *bIsTargetDeadPtr = false;
-
-					// 3. 몽타주 멈추기 (쓰러져 있는 거 취소)
-					ACharacter* Char = Cast<ACharacter>(TargetActor);
-					if (Char) Char->StopAnimMontage();
-
-					// 4. HP바 꽉 채우기
-					UWidgetComponent* WidgetComp = TargetActor->FindComponentByClass<UWidgetComponent>();
-					if (WidgetComp)
-					{
-						USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(WidgetComp->GetUserWidgetObject());
-						if (HPWidget) HPWidget->UpdateHP(100.0f, 100.0f);
-					}
-
-					// 5. 내 캐릭터라면 입력 다시 허용
-					if (TargetActor == UGameplayStatics::GetPlayerPawn(GetWorld(), 0))
-					{
-						if (PC) PC->EnableInput(PC);
-						UE_LOG(LogTemp, Warning, TEXT("Respawned!"));
-					}
+					TargetChar->ProcessRespawn(FVector(ResPkt->X, ResPkt->Y, ResPkt->Z));
 				}
 			}
 
@@ -283,14 +221,14 @@ void AMyNetworkActor::Tick(float DeltaTime)
 	for (auto& Elem : RemotePlayers)
 	{
 		FRemotePlayerInfo& Info = Elem.Value;
-		if (Info.Actor && IsValid(Info.Actor))
+		if (Info.Character && IsValid(Info.Character))
 		{
-			FVector OldPos = Info.Actor->GetActorLocation();
+			FVector OldPos = Info.Character->GetActorLocation();
 			FVector NewPos = FMath::VInterpTo(OldPos, Info.TargetPos, DeltaTime, 15.0f);
-			FRotator NewRot = FMath::RInterpTo(Info.Actor->GetActorRotation(), Info.TargetRot, DeltaTime, 15.0f);
+			FRotator NewRot = FMath::RInterpTo(Info.Character->GetActorRotation(), Info.TargetRot, DeltaTime, 15.0f);
 
-			Info.Actor->SetActorLocation(NewPos);
-			Info.Actor->SetActorRotation(NewRot);
+			Info.Character->SetActorLocation(NewPos);
+			Info.Character->SetActorRotation(NewRot);
 		}
 	}
 }
