@@ -73,3 +73,43 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+#########################
+# Unreal Engine Client (SyncFighterClient)
+#########################
+SyncFighterClient/Binaries/
+SyncFighterClient/Build/
+SyncFighterClient/DerivedDataCache/
+SyncFighterClient/Intermediate/
+SyncFighterClient/Saved/
+SyncFighterClient/.vs/
+SyncFighterClient/*.sln
+
+#########################
+# C++ IOCP Server (Server)
+#########################
+Server/Log/
+
+# 2. Visual Studio 빌드 결과물 및 임시 파일
+Server/SyncFighterServer/bin/
+Server/SyncFighterServer/obj/
+Server/SyncFighterServer/x64/
+Server/SyncFighterServer/SyncFighterServer/x64/
+Server/SyncFighterServer/Debug/
+Server/SyncFighterServer/Release/
+
+# 3. Visual Studio 솔루션 레벨 캐시 및 설정
+.vs/
+Server/SyncFighterServer/.vs/
+*.user
+*.aps
+*.suo
+*.VC.db
+*.VC.opendb
+
+# 4. 기타 컴파일 결과물
+*.exe
+*.dll
+*.lib
+*.pdb
+*.exp
