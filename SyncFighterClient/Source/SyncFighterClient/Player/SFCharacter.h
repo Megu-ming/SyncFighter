@@ -48,6 +48,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
 protected:
 	// 입력 처리 함수들
 	/** Called for movement input */
@@ -81,6 +84,13 @@ public:
 	// 3. UI 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "UI")
 	class UWidgetComponent* HPBarComponent;
+
+	// [Network Sync]
+	FVector TargetLocation;   // 서버에서 받은 목표 위치
+	FRotator TargetRotation;  // 서버에서 받은 목표 회전
+
+	// 매 프레임 호출해서 위치를 맞추고 '가짜 속도'를 주입하는 함수
+	void SyncTransform(float DeltaTime);
 
 private:
 	bool bIsDead = false;

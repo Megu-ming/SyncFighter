@@ -12,6 +12,8 @@
 AMyNetworkActor::AMyNetworkActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	PrimaryActorTick.TickGroup = TG_PostPhysics;
 }
 
 void AMyNetworkActor::BeginPlay()
@@ -31,28 +33,6 @@ void AMyNetworkActor::Tick(float DeltaTime)
 	// 1. GameInstance 가져오기 (이제 소켓은 얘가 관리함)
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI == nullptr) return;
-
-	//// --- [0. 공격 테스트 (마우스 왼쪽 클릭)] ---
-	//APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-
-	//if (PC && PC->WasInputKeyJustPressed(EKeys::LeftMouseButton))
-	//{
-	//	PacketPlayerAttack AttackPacket;
-	//	AttackPacket.Size = sizeof(PacketPlayerAttack);
-	//	AttackPacket.ID = C_TO_S_PLAYER_ATTACK;
-	//	AttackPacket.PlayerID = 0;
-
-	//	// [수정] BytesSent 변수 제거, 크기만 전달
-	//	GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
-
-	//	UE_LOG(LogTemp, Warning, TEXT("공격 패킷 전송!"));
-
-	//	ACharacter* MyCharacter = Cast<ACharacter>(PC->GetPawn());
-	//	if (MyCharacter && AttackMontage)
-	//	{
-	//		MyCharacter->PlayAnimMontage(AttackMontage);
-	//	}
-	//}
 
 	// --- [1. 이동 패킷 보내기 (Send)] --- 
 	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
@@ -216,19 +196,21 @@ void AMyNetworkActor::Tick(float DeltaTime)
 		}
 	}
 
-	// --- [3. 보간 (Interpolation)] ---
-	// (기존과 동일, 가짜 속도 주입 부분은 지난번에 애니메이션 BP에서 해결했으면 제거해도 됨)
+	// 보간
 	for (auto& Elem : RemotePlayers)
 	{
 		FRemotePlayerInfo& Info = Elem.Value;
+
+		// 캐릭터가 살아있고 유효한지 확인
 		if (Info.Character && IsValid(Info.Character))
 		{
-			FVector OldPos = Info.Character->GetActorLocation();
-			FVector NewPos = FMath::VInterpTo(OldPos, Info.TargetPos, DeltaTime, 15.0f);
-			FRotator NewRot = FMath::RInterpTo(Info.Character->GetActorRotation(), Info.TargetRot, DeltaTime, 15.0f);
+			// 1. 목표 데이터 전달
+			// (패킷 받을 때 넣어도 되지만, 확실하게 하기 위해 매번 갱신)
+			Info.Character->TargetLocation = Info.TargetPos;
+			Info.Character->TargetRotation = Info.TargetRot;
 
-			Info.Character->SetActorLocation(NewPos);
-			Info.Character->SetActorRotation(NewRot);
+			// 2. 캐릭터 스스로 동기화하도록 명령
+			Info.Character->SyncTransform(DeltaTime);
 		}
 	}
 }
