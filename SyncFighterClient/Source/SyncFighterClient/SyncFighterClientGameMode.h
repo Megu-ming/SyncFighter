@@ -13,6 +13,9 @@ class ASyncFighterClientGameMode : public AGameModeBase
 
 public:
 	ASyncFighterClientGameMode();
+
+protected:
+	virtual void BeginPlay() override;
 };
 
 

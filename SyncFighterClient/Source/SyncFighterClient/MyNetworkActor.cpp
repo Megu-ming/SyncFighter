@@ -43,7 +43,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 
 		PacketPlayerMove MovePacket;
 		MovePacket.Size = sizeof(PacketPlayerMove);
-		MovePacket.ID = C_TO_S_PLAYER_MOVE;
+		MovePacket.Id = C_TO_S_PLAYER_MOVE;
 		MovePacket.PlayerID = 0;
 		MovePacket.X = Location.X;
 		MovePacket.Y = Location.Y;
@@ -77,7 +77,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 			}
 
 			// 헤더의 ID에 따라 분기 처리
-			if (Header->ID == S_TO_C_LOGIN)
+			if (Header->Id == S_TO_C_LOGIN)
 			{
 				PacketLogin* LoginPkt = (PacketLogin*)(Buffer + ProcessedBytes);
 
@@ -86,7 +86,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 
 				UE_LOG(LogTemp, Warning, TEXT("접속 성공! 내 ID는 [%d]번 입니다."), GI->MyPlayerID);
 			}
-			else if (Header->ID == C_TO_S_PLAYER_MOVE)
+			else if (Header->Id == C_TO_S_PLAYER_MOVE)
 			{
 				PacketPlayerMove* Packet = (PacketPlayerMove*)(Buffer + ProcessedBytes);
 
@@ -131,7 +131,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					}
 				}
 			}
-			else if (Header->ID == C_TO_S_PLAYER_ATTACK)
+			else if (Header->Id == C_TO_S_PLAYER_ATTACK)
 			{
 				PacketPlayerAttack* AttackPkt = (PacketPlayerAttack*)(Buffer + ProcessedBytes);
 
@@ -147,15 +147,18 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					}
 				}
 			}
-			else if (Header->ID == S_TO_C_DAMAGE)
+			else if (Header->Id == S_TO_C_DAMAGE)
 			{
 				PacketDamage* DmgPkt = (PacketDamage*)(Buffer + ProcessedBytes);
+
+				UE_LOG(LogTemp, Warning, TEXT("[Damage Packet] 맞은사람 ID: %d / 내 ID(GI): %d / 남은체력: %d"), DmgPkt->VictimID, GI->MyPlayerID, DmgPkt->RemainingHP);
 
 				// 1. 대상 찾기
 				ASFCharacter* TargetChar = nullptr;
 				if (DmgPkt->VictimID == GI->MyPlayerID)
 				{
 					// 나 자신
+					UE_LOG(LogTemp, Error, TEXT("-> 앗! 내 캐릭터가 맞았다!")); // 빨간 글씨로 눈에 띄게!
 					TargetChar = Cast<ASFCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 				}
 				else if (RemotePlayers.Contains(DmgPkt->VictimID))
@@ -169,7 +172,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					TargetChar->ProcessDamage(DmgPkt->RemainingHP);
 				}
 			}
-			else if (Header->ID == S_TO_C_RESPAWN) // 4번
+			else if (Header->Id == S_TO_C_RESPAWN) // 4번
 			{
 				PacketRespawn* ResPkt = (PacketRespawn*)(Buffer + ProcessedBytes);
 
