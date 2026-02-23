@@ -10,6 +10,10 @@ enum PacketID : int32_t // int32로 통일
 	C_TO_S_PLAYER_ATTACK = 2,
 	S_TO_C_DAMAGE = 3,
 	S_TO_C_RESPAWN = 4,
+
+	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
+	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
+	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
 };
 
 struct PacketHeader
@@ -22,6 +26,37 @@ struct PacketLogin : public PacketHeader
 {
 	int32_t MyPlayerID;				// "너는 이제부터 이 번호다"
 	float SpawnX, SpawnY, SpawnZ;	// "여기서 태어나라"
+};
+
+// 로그인/가입 결과 코드
+enum ELoginResult : int32_t
+{
+	SUCCESS = 0,               // 성공 (방으로 입장)
+	FAIL_WRONG_PW = 1,         // 실패: 비밀번호 틀림
+	FAIL_NOT_FOUND = 2,        // 실패: 없는 아이디 (클라는 이 코드를 받으면 '생성하시겠습니까?' UI 띄움)
+	REGISTER_SUCCESS = 3,      // 회원가입 성공
+	REGISTER_FAIL_DUP = 4      // 회원가입 실패: 이미 있는 아이디 (동시접속 예외처리)
+};
+
+// 1. 로그인 요청 패킷 (Client -> Server)
+struct PacketLoginReq : public PacketHeader
+{
+	char UserID[32];
+	char Password[32];
+};
+
+// 2. 로그인 응답 패킷 (Server -> Client)
+struct PacketLoginRes : public PacketHeader
+{
+	ELoginResult ResultCode;
+	int32_t PlayerID; // 성공했을 때 부여받을 고유 번호
+};
+
+// 3. 회원가입 요청 패킷 (Client -> Server)
+struct PacketRegisterReq : public PacketHeader
+{
+	char UserID[32];
+	char Password[32];
 };
 
 // 상속을 받으면 메모리 구조가 [Header][Body] 순서로 자동 배치됩니다.
