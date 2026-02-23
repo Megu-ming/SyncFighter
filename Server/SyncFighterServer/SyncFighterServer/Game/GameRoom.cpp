@@ -87,9 +87,11 @@ void GameRoom::HandleAttack(Session* attacker)
                 victim->_hp = 0;
                 victim->_isDead = true;
 
-                std::thread([this, victim]() {
+                int32_t victimId = victim->_id;
+
+                std::thread([this, victimId]() {
                     std::this_thread::sleep_for(std::chrono::seconds(5));
-                    this->Respawn(victim); // 5초 뒤 부활 함수 호출
+                    this->Respawn(victimId); // 5초 뒤 부활 함수 호출
                     }).detach();
             }
 
@@ -115,30 +117,45 @@ void GameRoom::HandleAttack(Session* attacker)
     }
 }
 
-void GameRoom::Respawn(Session* session)
+void GameRoom::Respawn(int32_t sessionId)
 {
     std::lock_guard<std::mutex> lock(_lock);
 
     // 이미 나간 유저면 패스
     // (세션 포인터 유효성 체크가 필요하지만, 지금은 간단히직접 접근)
     // *주의: 실제로는 SessionID로 맵에서 찾아야 안전함!
+    Session* targetSession = nullptr;
+    for (Session* s : _sessions)
+    {
+        if (s->_id == sessionId)
+        {
+            targetSession = s;
+            break;
+        }
+    }
 
-    session->_hp = 100;
-    session->_isDead = false;
+    if (targetSession == nullptr)
+    {
+        std::cout << "User " << sessionId << " already left. Cancel Respawn." << std::endl;
+        return;
+    }
+
+    targetSession->_hp = 100;
+    targetSession->_isDead = false;
 
     SpawnPoint spawn = GetRandomSpawnPoint();
-    session->_x = spawn.x;
-    session->_y = spawn.y;
-    session->_z = spawn.z;
+    targetSession->_x = spawn.x;
+    targetSession->_y = spawn.y;
+    targetSession->_z = spawn.z;
 
     // 부활 패킷 전송
     PacketRespawn respawnPkt;
     respawnPkt.Size = sizeof(PacketRespawn);
     respawnPkt.Id = S_TO_C_RESPAWN; // 4번
-    respawnPkt.PlayerID = session->_id;
-    respawnPkt.X = session->_x;
-    respawnPkt.Y = session->_y;
-    respawnPkt.Z = session->_z;
+    respawnPkt.PlayerID = targetSession->_id;
+    respawnPkt.X = targetSession->_x;
+    respawnPkt.Y = targetSession->_y;
+    respawnPkt.Z = targetSession->_z;
 
     // 부활 패킷 브로드캐스트
     for (Session* s : _sessions)
@@ -146,7 +163,7 @@ void GameRoom::Respawn(Session* session)
         s->Send(&respawnPkt, sizeof(respawnPkt));
     }
 
-    std::cout << "User " << session->_id << " Respawned!" << std::endl;
+    std::cout << "User " << targetSession->_id << " Respawned!" << std::endl;
 }
 
 SpawnPoint GameRoom::GetRandomSpawnPoint()

@@ -19,7 +19,7 @@ public:
 
 	void HandleAttack(Session* attacker);
 
-	void Respawn(Session* session);
+	void Respawn(int32_t sessionId);
 private:
 	std::vector<Session*> _sessions;
 	std::mutex _lock; // 이 방 전용 자물쇠
