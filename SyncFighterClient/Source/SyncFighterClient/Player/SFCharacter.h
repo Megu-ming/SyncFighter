@@ -12,6 +12,17 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
+UENUM(BlueprintType)
+enum class ECharacterState : uint8
+{
+	Idle        UMETA(DisplayName = "기본"),
+	Attacking   UMETA(DisplayName = "공격중"),
+	Hit         UMETA(DisplayName = "피격중"),
+	Jumping     UMETA(DisplayName = "점프중"),
+	KnockedDown UMETA(DisplayName = "넘어진상태"),
+	Dead		UMETA(DisplayName = "사망"),
+};
+
 UCLASS()
 class SYNCFIGHTERCLIENT_API ASFCharacter : public ACharacter
 {
@@ -20,6 +31,13 @@ class SYNCFIGHTERCLIENT_API ASFCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	ASFCharacter();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "State")
+	ECharacterState CurrentState = ECharacterState::Idle;
+
+	// 상태 변경 완료를 알리는 함수
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EndState();
 
 protected:
 	// Called when the game starts or when spawned
@@ -91,7 +109,4 @@ public:
 
 	// 매 프레임 호출해서 위치를 맞추고 '가짜 속도'를 주입하는 함수
 	void SyncTransform(float DeltaTime);
-
-private:
-	bool bIsDead = false;
 };

@@ -49,6 +49,14 @@ ASFCharacter::ASFCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 }
 
+void ASFCharacter::EndState()
+{
+	if (CurrentState == ECharacterState::Attacking || CurrentState == ECharacterState::Hit)
+	{
+		CurrentState = ECharacterState::Idle;
+	}
+}
+
 void ASFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -64,6 +72,11 @@ void ASFCharacter::BeginPlay()
 
 void ASFCharacter::Move(const FInputActionValue& Value)
 {
+	if (CurrentState != ECharacterState::Idle && CurrentState != ECharacterState::Jumping)
+	{
+		return;
+	}
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
@@ -98,6 +111,12 @@ void ASFCharacter::Look(const FInputActionValue& Value)
 
 void ASFCharacter::Attack(const FInputActionValue& Value)
 {
+	if (CurrentState != ECharacterState::Idle)
+	{
+		return;
+	}
+
+	CurrentState = ECharacterState::Attacking;
 	ProcessAttack();
 
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
@@ -105,7 +124,7 @@ void ASFCharacter::Attack(const FInputActionValue& Value)
 	{
 		PacketPlayerAttack AttackPacket;
 		AttackPacket.Size = sizeof(PacketPlayerAttack);
-		AttackPacket.ID = C_TO_S_PLAYER_ATTACK;
+		AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
 		AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
 
 		GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
@@ -139,8 +158,7 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ASFCharacter::ProcessAttack()
 {
-	if (bIsDead) return;
-	if (AttackMontage) PlayAnimMontage(AttackMontage);
+	if (AttackMontage) PlayAnimMontage(AttackMontage, 1.5f);
 }
 
 void ASFCharacter::ProcessDamage(int32 RemainingHP)
@@ -156,9 +174,9 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 	}
 
 	// 2. 사망 처리
-	if (RemainingHP <= 0 && !bIsDead)
+	if (RemainingHP <= 0 && CurrentState != ECharacterState::Dead)
 	{
-		bIsDead = true;
+		CurrentState = ECharacterState::Dead;
 		if (DeathMontage) PlayAnimMontage(DeathMontage);
 
 		// 캡슐 충돌 끄기 (시체 위로 걸어다닐 수 있게)
@@ -171,7 +189,7 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 
 void ASFCharacter::ProcessRespawn(FVector NewLocation)
 {
-	bIsDead = false;
+	CurrentState = ECharacterState::Idle;
 	SetActorLocation(NewLocation);
 
 	// UI 복구

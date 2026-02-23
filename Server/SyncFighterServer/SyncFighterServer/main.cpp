@@ -129,7 +129,7 @@ int main() {
         // CompletionKey로 'Session 포인터'를 넘겨줌 -> 나중에 일꾼이 이걸로 누구 건지 알 수 있음
         CreateIoCompletionPort((HANDLE)clientSocket, g_iocpHandle, (ULONG_PTR)newSession, 0);
 
-        GGameRoom.Enter(newSession);
+        //GGameRoom.Enter(newSession);
 
         newSession->Recv();
     }
