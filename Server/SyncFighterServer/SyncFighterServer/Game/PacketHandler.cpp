@@ -32,6 +32,9 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
 	case C_TO_S_PLAYER_ATTACK:
 		HandlePlayerAttack(session, (PacketPlayerAttack*)buffer);
 		break;
+    case C_TO_S_CHAT:
+        HandleChat(session, (PacketChat*)buffer);
+        break;
 	}
 	
 }
@@ -140,4 +143,11 @@ void PacketHandler::HandlePlayerAttack(Session* session, PacketPlayerAttack* pac
 	GGameRoom.Broadcast(packet, packet->Size, session);
 
 	GGameRoom.HandleAttack(session);
+}
+
+void PacketHandler::HandleChat(Session* session, PacketChat* packet)
+{
+    packet->SenderId = session->_id;
+    std::cout << "[Chat] User " << session->_id << " : " << packet->Message << std::endl;
+    GGameRoom.Broadcast(packet, packet->Size);
 }

@@ -14,4 +14,6 @@ public:
 	// 각 패킷별 처리 함수
 	static void HandlePlayerMove(Session* session, PacketPlayerMove* packet);
 	static void HandlePlayerAttack(Session* session, PacketPlayerAttack* packet);
+
+	static void HandleChat(Session* session, PacketChat* packet);
 };

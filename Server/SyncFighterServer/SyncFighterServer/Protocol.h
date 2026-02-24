@@ -14,6 +14,9 @@ enum PacketID : int32_t // int32로 통일
 	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
 	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
 	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
+
+	C_TO_S_CHAT = 20,
+	S_TO_C_CHAT = 21,
 };
 
 struct PacketHeader
@@ -83,6 +86,12 @@ struct PacketRespawn : public PacketHeader
 {
 	int32_t PlayerID;
 	float X, Y, Z; // 부활 위치
+};
+
+struct PacketChat : public PacketHeader
+{
+	int32_t SenderId;       // 누가 보냈는지
+	char Message[256];		// 채팅 내용
 };
 
 #pragma pack(pop)
