@@ -9,6 +9,7 @@
 #include "SFGameInstance.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLoginResultDelegate, int32, ResultCode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnChatReceivedDelegate, int32, SenderID, FString, Message);
 
 UCLASS()
 class SYNCFIGHTERCLIENT_API USFGameInstance : public UGameInstance
@@ -45,6 +46,14 @@ public:
 	// 2. 로비에서 패킷을 계속 확인할 함수
 	UFUNCTION(BlueprintCallable, Category = "Network|Login")
 	void CheckLoginPackets();
+
+	// 2. UI가 바인딩할 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "Network|Chat")
+	FOnChatReceivedDelegate OnChatReceived;
+
+	// 3. UI에서 채팅 칠 때 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Network|Chat")
+	void SendChatMessage(FString Message);
 
 public:
 	FSocket* Socket;

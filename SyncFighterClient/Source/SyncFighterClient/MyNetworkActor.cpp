@@ -193,6 +193,18 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					TargetChar->ProcessRespawn(FVector(ResPkt->X, ResPkt->Y, ResPkt->Z));
 				}
 			}
+			else if (Header->Id == S_TO_C_CHAT)
+			{
+				PacketChat* ChatPkt = (PacketChat*)(Buffer + ProcessedBytes);
+
+				// char 배열(UTF8) -> FString(언리얼 한글)으로 복구
+				FString ReceivedMsg = FString(UTF8_TO_TCHAR(ChatPkt->Message));
+
+				UE_LOG(LogTemp, Warning, TEXT("[Chat] %d번 유저: %s"), ChatPkt->SenderId, *ReceivedMsg);
+
+				// GameInstance의 델리게이트를 통해 UI로 쫙 뿌려주기
+				GI->OnChatReceived.Broadcast(ChatPkt->SenderId, ReceivedMsg);
+			}
 
 			// 다음 패킷으로 포인터 이동
 			ProcessedBytes += Header->Size;

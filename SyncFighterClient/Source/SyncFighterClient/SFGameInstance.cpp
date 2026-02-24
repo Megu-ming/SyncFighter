@@ -128,3 +128,15 @@ void USFGameInstance::CheckLoginPackets()
 		}
 	}
 }
+
+void USFGameInstance::SendChatMessage(FString Message)
+{
+	PacketChat Pkt = {};
+	Pkt.Size = sizeof(PacketChat);
+	Pkt.Id = C_TO_S_CHAT;
+
+	// FString(언리얼 한글) -> UTF8(서버용) -> char 배열로 안전하게 복사
+	strncpy_s(Pkt.Message, TCHAR_TO_UTF8(*Message), sizeof(Pkt.Message) - 1);
+
+	SendPacket(&Pkt, sizeof(Pkt));
+}
