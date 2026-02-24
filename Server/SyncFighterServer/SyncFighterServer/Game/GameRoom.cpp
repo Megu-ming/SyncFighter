@@ -80,38 +80,50 @@ void GameRoom::HandleAttack(Session* attacker)
         // 사거리 안에 들어왔다면? -> 히트!
         if (dist <= attackRange)
         {
+            float yawRad = attacker->_yaw * (3.141592f / 180.0f);
+            float forwardX = std::cos(yawRad);
+            float forwardY = std::sin(yawRad);
+
+            float dirX = dx / dist;
+            float dirY = dy / dist;
+
+            float dotProduct = (forwardX * dirX) + (forwardY * dirY);
+
             // 1. HP 깎기
-            victim->_hp -= damage;
-            if (victim->_hp <= 0) 
-            {
-                victim->_hp = 0;
-                victim->_isDead = true;
+            if (dotProduct >= 0.5f) {
+                victim->_hp -= damage;
 
-                int32_t victimId = victim->_id;
+                if (victim->_hp <= 0)
+                {
+                    victim->_hp = 0;
+                    victim->_isDead = true;
 
-                std::thread([this, victimId]() {
-                    std::this_thread::sleep_for(std::chrono::seconds(5));
-                    this->Respawn(victimId); // 5초 뒤 부활 함수 호출
-                    }).detach();
-            }
+                    int32_t victimId = victim->_id;
 
-            std::cout << "[Hit!] User " << attacker->_id << " -> User " << victim->_id
-                << " (HP: " << victim->_hp << ")" << std::endl;
+                    std::thread([this, victimId]() {
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                        this->Respawn(victimId); // 5초 뒤 부활 함수 호출
+                        }).detach();
+                }
 
-            // 2. 데미지 패킷 보내기 (모두에게 알려야 피격 모션 재생 가능)
-            PacketDamage damagePacket;
-            damagePacket.Size = sizeof(PacketDamage);
-            damagePacket.Id = S_TO_C_DAMAGE; // 3번
-            damagePacket.AttackerID = attacker->_id;
-            damagePacket.VictimID = victim->_id;
-            damagePacket.DamageAmount = damage;
-            damagePacket.RemainingHP = victim->_hp;
+                std::cout << "[Hit!] User " << attacker->_id << " -> User " << victim->_id
+                    << " (HP: " << victim->_hp << ")" << std::endl;
 
-            // Broadcast: 모두에게 "제 맞았어!" 알림
-            // (여기선 exceptMe 없이 모두에게 보냄. 맞은 놈도 알아야 하니까)
-            for (Session* s : _sessions)
-            {
-                s->Send(&damagePacket, sizeof(damagePacket));
+                // 2. 데미지 패킷 보내기 (모두에게 알려야 피격 모션 재생 가능)
+                PacketDamage damagePacket;
+                damagePacket.Size = sizeof(PacketDamage);
+                damagePacket.Id = S_TO_C_DAMAGE; // 3번
+                damagePacket.AttackerID = attacker->_id;
+                damagePacket.VictimID = victim->_id;
+                damagePacket.DamageAmount = damage;
+                damagePacket.RemainingHP = victim->_hp;
+
+                // Broadcast: 모두에게 "제 맞았어!" 알림
+                // (여기선 exceptMe 없이 모두에게 보냄. 맞은 놈도 알아야 하니까)
+                for (Session* s : _sessions)
+                {
+                    s->Send(&damagePacket, sizeof(damagePacket));
+                }
             }
         }
     }
