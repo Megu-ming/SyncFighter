@@ -16,8 +16,6 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
 {
 	PacketHeader* header = (PacketHeader*)buffer;
 
-	// 스위치문이 여기 숨어있지만, 메인 함수는 깔끔해집니다.
-	// (나중엔 이것도 함수 포인터 배열로 바꿀 수 있습니다)
 	switch (header->Id)
 	{
 	case C_TO_S_LOGIN_REQ: // 로그인 요청이 오면
@@ -36,7 +34,6 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
         HandleChat(session, (PacketChat*)buffer);
         break;
 	}
-	
 }
 
 // [로그인 요청 처리]
@@ -148,6 +145,9 @@ void PacketHandler::HandlePlayerAttack(Session* session, PacketPlayerAttack* pac
 void PacketHandler::HandleChat(Session* session, PacketChat* packet)
 {
     packet->SenderId = session->_id;
+
+    packet->Id = S_TO_C_CHAT;
+
     std::cout << "[Chat] User " << session->_id << " : " << packet->Message << std::endl;
     GGameRoom.Broadcast(packet, packet->Size);
 }
