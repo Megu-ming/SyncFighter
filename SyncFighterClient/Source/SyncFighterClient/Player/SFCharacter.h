@@ -43,6 +43,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaTime) override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
 
@@ -68,6 +70,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LockonAction;
 
 protected:
 	// 입력 처리 함수들
@@ -79,11 +84,12 @@ protected:
 
 	void Attack(const FInputActionValue& Value); // 공격
 
+	void StartLockOn(const FInputActionValue& Value);
+	void StopLockOn(const FInputActionValue& Value);
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
-	// --- [MyNetworkActor에서 이사 온 친구들] ---
-
 	// 1. 상태 관련 함수 (서버가 시킬 일들)
 	void ProcessAttack(); // 공격 모션 재생
 	void ProcessDamage(int32 RemainingHP); // 피격/사망 처리
@@ -109,4 +115,7 @@ public:
 
 	// 매 프레임 호출해서 위치를 맞추고 '가짜 속도'를 주입하는 함수
 	void SyncTransform(float DeltaTime);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	ASFCharacter* LockOnTarget;
 };
