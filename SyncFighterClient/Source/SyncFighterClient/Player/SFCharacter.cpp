@@ -53,10 +53,10 @@ ASFCharacter::ASFCharacter()
 
 void ASFCharacter::EndState()
 {
-	if (CurrentState == ECharacterState::Attacking || CurrentState == ECharacterState::Hit)
-	{
-		CurrentState = ECharacterState::Idle;
-	}
+	CurrentState = ECharacterState::Idle;
+
+	ComboIndex = 0;
+	bHasNextComboInput = false;
 }
 
 void ASFCharacter::BeginPlay()
@@ -96,7 +96,7 @@ void ASFCharacter::Tick(float DeltaTime)
 
 void ASFCharacter::Move(const FInputActionValue& Value)
 {
-	if (CurrentState != ECharacterState::Idle && CurrentState != ECharacterState::Jumping)
+	if (CurrentState != ECharacterState::Idle)
 	{
 		return;
 	}
@@ -133,15 +133,13 @@ void ASFCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void ASFCharacter::Attack(const FInputActionValue& Value)
+void ASFCharacter::BasicAttack(const FInputActionValue& Value)
 {
-	if (CurrentState != ECharacterState::Idle)
-	{
-		return;
-	}
+	if (CurrentState != ECharacterState::Idle 
+		&& CurrentState != ECharacterState::Rooted
+		&& CurrentState != ECharacterState::Attacking) return;
 
-	CurrentState = ECharacterState::Attacking;
-	ProcessAttack();
+	ProcessBasicAttack();
 
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI)
@@ -153,6 +151,36 @@ void ASFCharacter::Attack(const FInputActionValue& Value)
 
 		GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
 		UE_LOG(LogTemp, Log, TEXT("Attack Packet Sent!"));
+	}
+}
+
+void ASFCharacter::SkillQ(const FInputActionValue& Value)
+{
+	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
+
+	CurrentState = ECharacterState::Attacking;
+	ProcessSkillQ();
+
+	// TODO: 서버로 Q스킬 패킷 전송
+}
+
+void ASFCharacter::SkillE(const FInputActionValue& Value)
+{
+	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
+
+	CurrentState = ECharacterState::Attacking;
+	ProcessSkillE();
+
+	// TODO: 서버로 E스킬 패킷 전송
+}
+
+void ASFCharacter::Dodge(const FInputActionValue& Value)
+{
+	if (CurrentState == ECharacterState::Idle || CurrentState == ECharacterState::KnockedDown)
+	{
+		CurrentState = ECharacterState::Dodging;
+		ProcessDodge();
+		// TODO: 서버로 회피/기상 패킷 전송
 	}
 }
 
@@ -195,18 +223,19 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 
 		UE_LOG(LogTemp, Warning, TEXT("ASFCharacter::SetupPlayerInputComponent Binding Start"));
-		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASFCharacter::Move);
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASFCharacter::Look);
 		// Attack
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASFCharacter::Attack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASFCharacter::BasicAttack);
+		EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ASFCharacter::SkillQ);
+		EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ASFCharacter::SkillE);
 		// Lockon
 		EnhancedInputComponent->BindAction(LockonAction, ETriggerEvent::Triggered, this, &ASFCharacter::StartLockOn);
 		EnhancedInputComponent->BindAction(LockonAction, ETriggerEvent::Completed, this, &ASFCharacter::StopLockOn);
+		// Dodge
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ASFCharacter::Dodge);
 	}
 	else
 	{
@@ -214,9 +243,32 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	}
 }
 
-void ASFCharacter::ProcessAttack()
+void ASFCharacter::ProcessBasicAttack()
 {
-	if (AttackMontage) PlayAnimMontage(AttackMontage, 1.5f);
+	if (CurrentState == ECharacterState::Idle || CurrentState == ECharacterState::Rooted)
+	{
+		CurrentState = ECharacterState::Attacking;
+		ComboIndex = 1;
+		bHasNextComboInput = false;
+
+		// 몽타주의 "Combo1" 섹션부터 재생
+		if (AttackMontage) PlayAnimMontage(AttackMontage, 1.0f, FName("Combo1"));
+	}
+}
+
+void ASFCharacter::ProcessSkillQ()
+{
+}
+
+void ASFCharacter::ProcessSkillE()
+{
+}
+
+void ASFCharacter::ProcessDodge()
+{
+	// 임시
+	UE_LOG(LogTemp, Log, TEXT("회피 혹은 기상 시전!"));
+	EndState();
 }
 
 void ASFCharacter::ProcessDamage(int32 RemainingHP)
@@ -312,5 +364,21 @@ void ASFCharacter::SyncTransform(float DeltaTime)
 				GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 			}
 		}
+	}
+}
+
+// 애니메이션 노티파이에서 호출할 콤보 체크 함수
+void ASFCharacter::CheckNextCombo()
+{
+	if (bHasNextComboInput)
+	{
+		bHasNextComboInput = false; // 예약 초기화
+		ComboIndex++; // 콤보 증가
+
+		// Combo2, Combo3 섹션으로 점프!
+		FString SectionName = FString::Printf(TEXT("Combo%d"), ComboIndex);
+		PlayAnimMontage(AttackMontage, 1.0f, FName(*SectionName));
+
+		UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 발동!"), ComboIndex);
 	}
 }

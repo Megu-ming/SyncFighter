@@ -16,11 +16,17 @@ UENUM(BlueprintType)
 enum class ECharacterState : uint8
 {
 	Idle        UMETA(DisplayName = "기본"),
-	Attacking   UMETA(DisplayName = "공격중"),
-	Hit         UMETA(DisplayName = "피격중"),
-	Jumping     UMETA(DisplayName = "점프중"),
-	KnockedDown UMETA(DisplayName = "넘어진상태"),
-	Dead		UMETA(DisplayName = "사망"),
+	Attacking   UMETA(DisplayName = "공격중/스킬시전중"), // Q, E 스킬 포함
+	Dodging     UMETA(DisplayName = "회피중"),
+
+	// 상태이상
+	Stunned     UMETA(DisplayName = "기절"),
+	Rooted      UMETA(DisplayName = "속박"),
+	Airborne    UMETA(DisplayName = "공중에뜸"),
+	Staggered   UMETA(DisplayName = "경직"),
+	KnockedDown UMETA(DisplayName = "넘어짐"),
+
+	Dead		UMETA(DisplayName = "사망")
 };
 
 UCLASS()
@@ -37,7 +43,7 @@ public:
 
 	// 상태 변경 완료를 알리는 함수
 	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void EndState();
+	virtual void EndState();
 
 protected:
 	// Called when the game starts or when spawned
@@ -47,42 +53,39 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
-
-	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
+#pragma region InputAction
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
 
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
-
-	/** Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
-
-	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LockonAction;
+	// ★ 신규 추가: Q, E, 회피 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SkillQAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SkillEAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DodgeAction;
+#pragma endregion
 
 protected:
-	// 입력 처리 함수들
-	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
-
-	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	void Attack(const FInputActionValue& Value); // 공격
+	void BasicAttack(const FInputActionValue& Value);
+	void SkillQ(const FInputActionValue& Value);
+	void SkillE(const FInputActionValue& Value);
+	void Dodge(const FInputActionValue& Value);
 
 	void StartLockOn(const FInputActionValue& Value);
 	void StopLockOn(const FInputActionValue& Value);
@@ -91,9 +94,13 @@ protected:
 
 public:
 	// 1. 상태 관련 함수 (서버가 시킬 일들)
-	void ProcessAttack(); // 공격 모션 재생
-	void ProcessDamage(int32 RemainingHP); // 피격/사망 처리
-	void ProcessRespawn(FVector NewLocation); // 부활 처리
+	virtual void ProcessBasicAttack();
+	virtual void ProcessSkillQ();
+	virtual void ProcessSkillE();
+	virtual void ProcessDodge();
+
+	virtual void ProcessDamage(int32 RemainingHP); // 피격/사망 처리
+	virtual void ProcessRespawn(FVector NewLocation); // 부활 처리
 
 	// 2. 변수들
 	UPROPERTY(EditAnywhere, Category = "Animation")
@@ -118,4 +125,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	ASFCharacter* LockOnTarget;
+
+	// 기본공격 콤보
+	int32 ComboIndex = 0;
+	bool bHasNextComboInput = false;
+
+	// 애니메이션 노티파이에서 호출할 콤보 체크 함수
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void CheckNextCombo();
 };

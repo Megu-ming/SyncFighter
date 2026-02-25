@@ -143,7 +143,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					ASFCharacter* Character = Info.Character;
 					if (Character)
 					{
-						Character->ProcessAttack();
+						Character->ProcessBasicAttack();
 					}
 				}
 			}
