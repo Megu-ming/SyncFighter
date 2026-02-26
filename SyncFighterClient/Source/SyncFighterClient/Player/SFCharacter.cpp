@@ -37,6 +37,7 @@ ASFCharacter::ASFCharacter()
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->SocketOffset = FVector(0.0f, 70.0f, 50.0f);
 
 	// 2. 위젯 컴포넌트 설정 (이사 옴)
 	HPBarComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HPBarComponent"));
@@ -68,6 +69,15 @@ void ASFCharacter::BeginPlay()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+
+	if (IsLocallyControlled() && CrosshairWidgetClass)
+	{
+		CrosshairWidget = CreateWidget<UUserWidget>(GetWorld(), CrosshairWidgetClass);
+		if (CrosshairWidget)
+		{
+			CrosshairWidget->AddToViewport(); // 화면에 부착!
 		}
 	}
 }
@@ -120,18 +130,6 @@ void ASFCharacter::BasicAttack(const FInputActionValue& Value)
 		&& CurrentState != ECharacterState::BasicAttacking) return;
 
 	ProcessBasicAttack();
-
-	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-	if (GI)
-	{
-		PacketPlayerAttack AttackPacket;
-		AttackPacket.Size = sizeof(PacketPlayerAttack);
-		AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
-		AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
-
-		GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
-		UE_LOG(LogTemp, Log, TEXT("Attack Packet Sent!"));
-	}
 }
 
 void ASFCharacter::SkillQ(const FInputActionValue& Value)
@@ -186,7 +184,30 @@ void ASFCharacter::ProcessBasicAttack()
 		bHasNextComboInput = false;
 
 		// 몽타주의 "Combo1" 섹션부터 재생
-		if (AttackMontage) PlayAnimMontage(AttackMontage, 1.0f, FName("Combo1"));
+		if (AttackMontage)
+		{
+			PlayAnimMontage(AttackMontage, 1.0f, FName("Combo1"));
+
+			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+			if (GI)
+			{
+				PacketPlayerAttack AttackPacket;
+				AttackPacket.Size = sizeof(PacketPlayerAttack);
+				AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
+				AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
+
+				GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
+				UE_LOG(LogTemp, Log, TEXT("Attack Packet Sent!"));
+			}
+		}
+	}
+	else if (CurrentState == ECharacterState::BasicAttacking)
+	{
+		if (ComboIndex < MaxComboCount)
+		{
+			bHasNextComboInput = true;
+			UE_LOG(LogTemp, Log, TEXT("[캐릭터] 다음 콤보 예약됨! (현재: %d타 / 최대: %d타)"), ComboIndex, MaxComboCount);
+		}
 	}
 }
 
@@ -313,6 +334,18 @@ void ASFCharacter::CheckNextCombo()
 		FString SectionName = FString::Printf(TEXT("Combo%d"), ComboIndex);
 		PlayAnimMontage(AttackMontage, 1.0f, FName(*SectionName));
 
-		UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 발동!"), ComboIndex);
+		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+		if (GI)
+		{
+			PacketPlayerAttack AttackPacket;
+			AttackPacket.Size = sizeof(PacketPlayerAttack);
+			AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
+			AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
+
+			GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
+			UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 패킷 전송"), ComboIndex);
+		}
+
+
 	}
 }

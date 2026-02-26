@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -80,7 +78,6 @@ protected:
 	void BasicAttack(const FInputActionValue& Value);
 	void SkillQ(const FInputActionValue& Value);
 	void SkillE(const FInputActionValue& Value);
-	void Dodge(const FInputActionValue& Value);
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -108,6 +105,12 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "UI")
 	class UWidgetComponent* HPBarComponent;
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UUserWidget> CrosshairWidgetClass; // 에디터에서 넣을 빈칸
+
+	UPROPERTY()
+	class UUserWidget* CrosshairWidget;
+
 	// [Network Sync]
 	FVector TargetLocation;   // 서버에서 받은 목표 위치
 	FRotator TargetRotation;  // 서버에서 받은 목표 회전
@@ -118,6 +121,9 @@ public:
 	// 기본공격 콤보
 	int32 ComboIndex = 0;
 	bool bHasNextComboInput = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	int32 MaxComboCount = 3;
 
 	// 애니메이션 노티파이에서 호출할 콤보 체크 함수
 	UFUNCTION(BlueprintCallable, Category = "Combat")

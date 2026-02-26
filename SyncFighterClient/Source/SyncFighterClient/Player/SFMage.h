@@ -31,4 +31,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillEMontage;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
+	void FireMagic(FName SocketName);
 };
