@@ -40,7 +40,11 @@ void AMyNetworkActor::BeginPlay()
 			if (PC && MyChar)
 			{
 				PC->Possess(MyChar);
-				MyChar->Controller = PC;
+				
+				FInputModeGameOnly InputMode;
+				PC->SetInputMode(InputMode);
+				PC->bShowMouseCursor = false;
+
 				UE_LOG(LogTemp, Warning, TEXT("내 캐릭터 스폰 및 빙의 완료! (Class: %d)"), GI->MyClassType);
 			}
 		}
@@ -119,7 +123,13 @@ void AMyNetworkActor::Tick(float DeltaTime)
 				// 안전장치
 				if (Packet->PlayerID < 0 || Packet->PlayerID > 1000)
 				{
-					ProcessedBytes += Packet->Size;
+					ProcessedBytes += Header->Size;
+					continue;
+				}
+
+				if (Packet->PlayerID == GI->MyPlayerID)
+				{
+					ProcessedBytes += Header->Size;
 					continue;
 				}
 
@@ -161,6 +171,12 @@ void AMyNetworkActor::Tick(float DeltaTime)
 			else if (Header->Id == C_TO_S_PLAYER_ATTACK)
 			{
 				PacketPlayerAttack* AttackPkt = (PacketPlayerAttack*)(Buffer + ProcessedBytes);
+
+				if (AttackPkt->PlayerID == GI->MyPlayerID)
+				{
+					ProcessedBytes += Header->Size;
+					continue;
+				}
 
 				if (RemotePlayers.Contains(AttackPkt->PlayerID))
 				{

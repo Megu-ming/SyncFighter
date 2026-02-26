@@ -64,14 +64,6 @@ void ASFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-	}
-
 	if (IsLocallyControlled() && CrosshairWidgetClass)
 	{
 		CrosshairWidget = CreateWidget<UUserWidget>(GetWorld(), CrosshairWidgetClass);
@@ -154,8 +146,16 @@ void ASFCharacter::SkillE(const FInputActionValue& Value)
 
 void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
 
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
 		UE_LOG(LogTemp, Warning, TEXT("ASFCharacter::SetupPlayerInputComponent Binding Start"));
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASFCharacter::Move);
@@ -188,16 +188,19 @@ void ASFCharacter::ProcessBasicAttack()
 		{
 			PlayAnimMontage(AttackMontage, 1.0f, FName("Combo1"));
 
-			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-			if (GI)
+			if(IsLocallyControlled())
 			{
-				PacketPlayerAttack AttackPacket;
-				AttackPacket.Size = sizeof(PacketPlayerAttack);
-				AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
-				AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
+				USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+				if (GI)
+				{
+					PacketPlayerAttack AttackPacket;
+					AttackPacket.Size = sizeof(PacketPlayerAttack);
+					AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
+					AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
 
-				GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
-				UE_LOG(LogTemp, Log, TEXT("Attack Packet Sent!"));
+					GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
+					UE_LOG(LogTemp, Log, TEXT("Attack Packet Sent!"));
+				}
 			}
 		}
 	}
@@ -217,13 +220,6 @@ void ASFCharacter::ProcessSkillQ()
 
 void ASFCharacter::ProcessSkillE()
 {
-}
-
-void ASFCharacter::ProcessDodge()
-{
-	// 임시
-	UE_LOG(LogTemp, Log, TEXT("회피 혹은 기상 시전!"));
-	EndState();
 }
 
 void ASFCharacter::ProcessDamage(int32 RemainingHP)
@@ -334,18 +330,19 @@ void ASFCharacter::CheckNextCombo()
 		FString SectionName = FString::Printf(TEXT("Combo%d"), ComboIndex);
 		PlayAnimMontage(AttackMontage, 1.0f, FName(*SectionName));
 
-		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-		if (GI)
+		if(IsLocallyControlled())
 		{
-			PacketPlayerAttack AttackPacket;
-			AttackPacket.Size = sizeof(PacketPlayerAttack);
-			AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
-			AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
+			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+			if (GI)
+			{
+				PacketPlayerAttack AttackPacket;
+				AttackPacket.Size = sizeof(PacketPlayerAttack);
+				AttackPacket.Id = C_TO_S_PLAYER_ATTACK;
+				AttackPacket.PlayerID = GI->MyPlayerID; // 내 ID
 
-			GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
-			UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 패킷 전송"), ComboIndex);
+				GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
+				UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 패킷 전송"), ComboIndex);
+			}
 		}
-
-
 	}
 }
