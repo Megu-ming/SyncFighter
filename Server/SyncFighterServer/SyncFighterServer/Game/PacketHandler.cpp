@@ -24,6 +24,9 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
 	case C_TO_S_REGISTER_REQ: // 가입 요청이 오면
 		HandleRegisterReq(session, (PacketRegisterReq*)buffer);
 		break;
+    case C_TO_S_ENTER_GAME_REQ:
+        HandleEnterGameReq(session, (PacketEnterGameReq*)buffer);
+        break;
 	case C_TO_S_PLAYER_MOVE:
 		HandlePlayerMove(session, (PacketPlayerMove*)buffer);
 		break;
@@ -63,7 +66,7 @@ void PacketHandler::HandleLoginReq(Session* session, PacketLoginReq* packet)
 
             session->Send(&resPacket, sizeof(resPacket));
             
-            GGameRoom.Enter(session);
+            // GGameRoom.Enter(session); 이제 입장은 EnterGameReq 쪽에서
 
             return;
         }
@@ -118,6 +121,16 @@ void PacketHandler::HandleRegisterReq(Session* session, PacketRegisterReq* packe
     session->Send(&resPacket, sizeof(resPacket));
 }
 
+void PacketHandler::HandleEnterGameReq(Session* session, PacketEnterGameReq* packet)
+{
+    session->_classType = packet->ClassType;
+
+    std::cout << "[User " << session->_id << "] Enter Game! Class: " << session->_classType << std::endl;
+
+    // 2. 직업까지 골랐으니 이제 진짜로 게임 룸에 입장시킵니다!
+    GGameRoom.Enter(session);
+}
+
 void PacketHandler::HandlePlayerMove(Session* session, PacketPlayerMove* packet)
 {
 	session->_x = packet->X;
@@ -127,6 +140,8 @@ void PacketHandler::HandlePlayerMove(Session* session, PacketPlayerMove* packet)
 
 	// 패킷 검증 및 수정
 	packet->PlayerID = session->_id;
+    packet->ClassType = session->_classType;
+
 	// 방에 있는 사람들에게 전송
 	GGameRoom.Broadcast(packet, packet->Size, session);
 }

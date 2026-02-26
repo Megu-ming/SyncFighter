@@ -11,6 +11,8 @@ public:
 	static void HandleLoginReq(Session* session, PacketLoginReq* packet);
 	static void HandleRegisterReq(Session* session, PacketRegisterReq* packet);
 
+	static void HandleEnterGameReq(Session* session, PacketEnterGameReq* packet);
+
 	// 각 패킷별 처리 함수
 	static void HandlePlayerMove(Session* session, PacketPlayerMove* packet);
 	static void HandlePlayerAttack(Session* session, PacketPlayerAttack* packet);

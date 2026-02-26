@@ -14,9 +14,10 @@ enum PacketID : int32_t // int32로 통일
 	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
 	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
 	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
+	C_TO_S_ENTER_GAME_REQ = 13, // C -> S 직업 선택 후 게임 입장 요청
 
-	C_TO_S_CHAT = 20,
-	S_TO_C_CHAT = 21,
+	C_TO_S_CHAT = 20,		// C -> S 채팅 패킷
+	S_TO_C_CHAT = 21,		// S -> C 채팅 패킷
 };
 
 struct PacketHeader
@@ -41,6 +42,13 @@ enum ELoginResult : int32_t
 	REGISTER_FAIL_DUP = 4      // 회원가입 실패: 이미 있는 아이디 (동시접속 예외처리)
 };
 
+enum EClassType : int32_t
+{
+	WARRIOR = 0,
+	MAGE = 1
+};
+
+#pragma region 게임 진입 전 패킷
 // 1. 로그인 요청 패킷 (Client -> Server)
 struct PacketLoginReq : public PacketHeader
 {
@@ -62,10 +70,18 @@ struct PacketRegisterReq : public PacketHeader
 	char Password[32];
 };
 
-// 상속을 받으면 메모리 구조가 [Header][Body] 순서로 자동 배치됩니다.
+struct PacketEnterGameReq : public PacketHeader
+{
+	int32_t ClassType; // 선택한 직업 번호를 들고 게임 입장
+};
+#pragma endregion
+
+
+#pragma region 캐릭터 조작 패킷
 struct PacketPlayerMove : public PacketHeader
 {
 	int32_t PlayerID;
+	int32_t ClassType;
 	float X, Y, Z, Yaw;
 };
 
@@ -87,6 +103,7 @@ struct PacketRespawn : public PacketHeader
 	int32_t PlayerID;
 	float X, Y, Z; // 부활 위치
 };
+#pragma endregion
 
 struct PacketChat : public PacketHeader
 {

@@ -32,6 +32,8 @@ public:
 public:
 	// ★ 게임 데이터 추가
 	// (원래는 Player 클래스를 따로 만드는 게 정석이지만, 일단 여기에 둡니다)
+	int32_t _classType;
+
 	float _x = 0, _y = 0, _z = 0, _yaw = 0; // 위치 기억
 	int32_t _hp = 100;                      // 체력
 	bool _isDead = false;                   // 사망 여부
