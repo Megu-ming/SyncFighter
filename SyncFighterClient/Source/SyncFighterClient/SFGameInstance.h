@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Network|Login")
 	void RequestRegister(FString UserID, FString Password);
 
+	UFUNCTION(BlueprintCallable, Category = "Network|Login")
+	void RequestEnterGame(int32 ClassType);
+
 	// 1. UI에서 바인딩할 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Network|Login")
 	FOnLoginResultDelegate OnLoginResult;
@@ -60,4 +63,9 @@ public:
 	FString ServerIP = "127.0.0.1";
 	int32 ServerPort = 7777;
 	int32 MyPlayerID = -1;
+
+	// 직업정보
+	UPROPERTY(BlueprintReadWrite, Category = "Network")
+	int32 MyClassType = 0;
+
 };

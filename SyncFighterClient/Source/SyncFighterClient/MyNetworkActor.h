@@ -38,8 +38,11 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	UPROPERTY(EditAnywhere, Category = "Network")
-	TSubclassOf<class ASFCharacter> RemoteCharacterClass;
+	UPROPERTY(EditAnywhere, Category = "Network|Class")
+	TSubclassOf<class ASFCharacter> WarriorClass;
+
+	UPROPERTY(EditAnywhere, Category = "Network|Class")
+	TSubclassOf<class ASFCharacter> MageClass;
 
 private:
 	// 접속한 다른 플레이어들을 관리하는 목록 (ID : 액터)

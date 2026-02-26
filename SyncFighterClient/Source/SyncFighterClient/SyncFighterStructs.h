@@ -14,6 +14,7 @@ enum PacketID : int32
 	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
 	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
 	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
+	C_TO_S_ENTER_GAME_REQ = 13, // C -> S 직업 선택 후 게임 입장 요청
 
 	C_TO_S_CHAT = 20, // 추가
 	S_TO_C_CHAT = 21, // 추가
@@ -41,11 +42,18 @@ enum ELoginResult : int32
 	REGISTER_FAIL_DUP = 4      // 회원가입 실패: 이미 있는 아이디 (동시접속 예외처리)
 };
 
+enum EClassType : int32
+{
+	WARRIOR = 0,
+	MAGE = 1
+};
+
 // 1. 로그인 요청 패킷 (Client -> Server)
 struct PacketLoginReq : public PacketHeader
 {
 	char UserID[32];
 	char Password[32];
+	int32 ClassType;
 };
 
 // 2. 로그인 응답 패킷 (Server -> Client)
@@ -62,9 +70,15 @@ struct PacketRegisterReq : public PacketHeader
 	char Password[32];
 };
 
+struct PacketEnterGameReq : public PacketHeader
+{
+	int32 ClassType; // 선택한 직업 번호를 들고 게임 입장
+};
+
 struct PacketPlayerMove : public PacketHeader
 {
 	int32 PlayerID;
+	int32 ClassType;
 	float X, Y, Z, Yaw;
 };
 

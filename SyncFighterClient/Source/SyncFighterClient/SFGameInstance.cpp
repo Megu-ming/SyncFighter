@@ -78,7 +78,7 @@ void USFGameInstance::RequestLogin(FString UserID, FString Password)
 
 	SendPacket(&Pkt, sizeof(Pkt));
 
-	UE_LOG(LogTemp, Log, TEXT("Login Request Sent: ID=%s"), *UserID);
+	UE_LOG(LogTemp, Log, TEXT("Login Request Sent: ID=%s, Class=%d"), *UserID);
 }
 
 void USFGameInstance::RequestRegister(FString UserID, FString Password)
@@ -93,6 +93,18 @@ void USFGameInstance::RequestRegister(FString UserID, FString Password)
 	SendPacket(&Pkt, sizeof(Pkt));
 
 	UE_LOG(LogTemp, Log, TEXT("Register Request Sent: ID=%s"), *UserID);
+}
+
+void USFGameInstance::RequestEnterGame(int32 ClassType)
+{
+	MyClassType = ClassType; // 금고에 저장
+
+	PacketEnterGameReq Pkt;
+	Pkt.Size = sizeof(PacketEnterGameReq);
+	Pkt.Id = C_TO_S_ENTER_GAME_REQ;
+	Pkt.ClassType = ClassType;
+
+	SendPacket(&Pkt, sizeof(Pkt));
 }
 
 void USFGameInstance::CheckLoginPackets()

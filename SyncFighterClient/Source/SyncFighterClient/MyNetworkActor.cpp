@@ -19,6 +19,32 @@ AMyNetworkActor::AMyNetworkActor()
 void AMyNetworkActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+	if (GI)
+	{
+		// 내가 선택한 직업에 맞는 클래스 준비
+		TSubclassOf<ASFCharacter> MySpawnClass = (GI->MyClassType == 1) ? MageClass : WarriorClass;
+
+		if (MySpawnClass)
+		{
+			// (나중에 PlayerStart 위치로 바꾸시면 됩니다)
+			FVector SpawnLoc(900.0f, 1000.0f, 100.0f);
+			FRotator SpawnRot(0.0f, 0.0f, 0.0f);
+
+			// 1. 소환!
+			ASFCharacter* MyChar = GetWorld()->SpawnActor<ASFCharacter>(MySpawnClass, SpawnLoc, SpawnRot);
+
+			// 2. 빙의! (키보드/마우스 컨트롤 연결)
+			APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+			if (PC && MyChar)
+			{
+				PC->Possess(MyChar);
+				MyChar->Controller = PC;
+				UE_LOG(LogTemp, Warning, TEXT("내 캐릭터 스폰 및 빙의 완료! (Class: %d)"), GI->MyClassType);
+			}
+		}
+	}
 }
 
 void AMyNetworkActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -105,13 +131,14 @@ void AMyNetworkActor::Tick(float DeltaTime)
 				}
 				else
 				{
+					TSubclassOf<ASFCharacter> SpawnClass = (Packet->ClassType == 1) ? MageClass : WarriorClass;
 					// 신규 유저 소환
-					if (RemoteCharacterClass)
+					if (SpawnClass)
 					{
 						FVector SpawnLoc(Packet->X, Packet->Y, Packet->Z);
 						FRotator SpawnRot(0, Packet->Yaw, 0);
 						FActorSpawnParameters SpawnParams;
-						ASFCharacter* NewActor = GetWorld()->SpawnActor<ASFCharacter>(RemoteCharacterClass, SpawnLoc, SpawnRot, SpawnParams);
+						ASFCharacter* NewActor = GetWorld()->SpawnActor<ASFCharacter>(SpawnClass, SpawnLoc, SpawnRot, SpawnParams);
 
 						if (NewActor)
 						{
