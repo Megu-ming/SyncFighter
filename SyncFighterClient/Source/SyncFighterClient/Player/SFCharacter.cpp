@@ -19,10 +19,10 @@ ASFCharacter::ASFCharacter()
 	GetCapsuleComponent()->InitCapsuleSize(25.f, 88.0f);
 
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	GetCharacterMovement()->bOrientRotationToMovement = false; // Character look Camera direction
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
 	GetCharacterMovement()->JumpZVelocity = 700.f;
@@ -72,31 +72,11 @@ void ASFCharacter::BeginPlay()
 	}
 }
 
-void ASFCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (LockOnTarget && LockOnTarget->CurrentState != ECharacterState::Dead)
-	{
-		if (Controller)
-		{
-			// 내 위치에서 타겟 위치를 바라보는 회전값 계산
-			FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), LockOnTarget->GetActorLocation());
-
-			// X(Roll)와 Y(Pitch)는 고정하고 Z(Yaw)만 돌려서 어지러움 방지
-			FRotator TargetRot = FRotator(Controller->GetControlRotation().Pitch, LookAtRot.Yaw, 0.0f);
-
-			// 현재 회전에서 타겟 회전으로 부드럽게 보간 (5.0f는 회전 속도, 조절 가능)
-			FRotator NewRot = FMath::RInterpTo(Controller->GetControlRotation(), TargetRot, DeltaTime, 5.0f);
-
-			Controller->SetControlRotation(NewRot);
-		}
-	}
-}
-
 void ASFCharacter::Move(const FInputActionValue& Value)
 {
-	if (CurrentState != ECharacterState::Idle)
+	if (CurrentState != ECharacterState::Idle 
+		&& CurrentState != ECharacterState::Jumping
+		&& CurrentState != ECharacterState::BasicAttacking)
 	{
 		return;
 	}
@@ -137,7 +117,7 @@ void ASFCharacter::BasicAttack(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle 
 		&& CurrentState != ECharacterState::Rooted
-		&& CurrentState != ECharacterState::Attacking) return;
+		&& CurrentState != ECharacterState::BasicAttacking) return;
 
 	ProcessBasicAttack();
 
@@ -158,7 +138,7 @@ void ASFCharacter::SkillQ(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
 
-	CurrentState = ECharacterState::Attacking;
+	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillQ();
 
 	// TODO: 서버로 Q스킬 패킷 전송
@@ -168,54 +148,10 @@ void ASFCharacter::SkillE(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
 
-	CurrentState = ECharacterState::Attacking;
+	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillE();
 
 	// TODO: 서버로 E스킬 패킷 전송
-}
-
-void ASFCharacter::Dodge(const FInputActionValue& Value)
-{
-	if (CurrentState == ECharacterState::Idle || CurrentState == ECharacterState::KnockedDown)
-	{
-		CurrentState = ECharacterState::Dodging;
-		ProcessDodge();
-		// TODO: 서버로 회피/기상 패킷 전송
-	}
-}
-
-void ASFCharacter::StartLockOn(const FInputActionValue& Value)
-{
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASFCharacter::StaticClass(), FoundActors);
-
-	float MinDistance = 2000.0f; // 록온 최대 거리 (20m)
-	LockOnTarget = nullptr;
-
-	for (AActor* Actor : FoundActors)
-	{
-		ASFCharacter* OtherChar = Cast<ASFCharacter>(Actor);
-		if (OtherChar && OtherChar != this && OtherChar->CurrentState != ECharacterState::Dead)
-		{
-			float Dist = FVector::Dist(GetActorLocation(), OtherChar->GetActorLocation());
-			if (Dist < MinDistance)
-			{
-				MinDistance = Dist;
-				LockOnTarget = OtherChar;
-			}
-		}
-	}
-
-	if (LockOnTarget)
-	{
-		UE_LOG(LogTemp, Log, TEXT("록온 시작! 타겟: %s"), *LockOnTarget->GetName());
-	}
-}
-
-void ASFCharacter::StopLockOn(const FInputActionValue& Value)
-{
-	LockOnTarget = nullptr;
-	UE_LOG(LogTemp, Log, TEXT("록온 해제!"));
 }
 
 void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -227,15 +163,13 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASFCharacter::Move);
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASFCharacter::Look);
+		// Jumping
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 		// Attack
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASFCharacter::BasicAttack);
 		EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ASFCharacter::SkillQ);
 		EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ASFCharacter::SkillE);
-		// Lockon
-		EnhancedInputComponent->BindAction(LockonAction, ETriggerEvent::Triggered, this, &ASFCharacter::StartLockOn);
-		EnhancedInputComponent->BindAction(LockonAction, ETriggerEvent::Completed, this, &ASFCharacter::StopLockOn);
-		// Dodge
-		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ASFCharacter::Dodge);
 	}
 	else
 	{
@@ -247,7 +181,7 @@ void ASFCharacter::ProcessBasicAttack()
 {
 	if (CurrentState == ECharacterState::Idle || CurrentState == ECharacterState::Rooted)
 	{
-		CurrentState = ECharacterState::Attacking;
+		CurrentState = ECharacterState::BasicAttacking;
 		ComboIndex = 1;
 		bHasNextComboInput = false;
 

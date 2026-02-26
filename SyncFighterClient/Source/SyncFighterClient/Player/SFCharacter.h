@@ -16,15 +16,14 @@ UENUM(BlueprintType)
 enum class ECharacterState : uint8
 {
 	Idle        UMETA(DisplayName = "기본"),
-	Attacking   UMETA(DisplayName = "공격중/스킬시전중"), // Q, E 스킬 포함
-	Dodging     UMETA(DisplayName = "회피중"),
+	BasicAttacking   UMETA(DisplayName = "공격중"),
+	SkillAttacking   UMETA(DisplayName = "스킬시전중"),
+	Jumping     UMETA(DisplayName = "점프중"),
 
 	// 상태이상
 	Stunned     UMETA(DisplayName = "기절"),
 	Rooted      UMETA(DisplayName = "속박"),
-	Airborne    UMETA(DisplayName = "공중에뜸"),
 	Staggered   UMETA(DisplayName = "경직"),
-	KnockedDown UMETA(DisplayName = "넘어짐"),
 
 	Dead		UMETA(DisplayName = "사망")
 };
@@ -46,10 +45,7 @@ public:
 	virtual void EndState();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -66,16 +62,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* AttackAction;
+	UInputAction* JumpAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* LockonAction;
+	UInputAction* AttackAction;
 	// ★ 신규 추가: Q, E, 회피 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SkillQAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SkillEAction;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* DodgeAction;
+
 #pragma endregion
 
 protected:
@@ -86,9 +81,6 @@ protected:
 	void SkillQ(const FInputActionValue& Value);
 	void SkillE(const FInputActionValue& Value);
 	void Dodge(const FInputActionValue& Value);
-
-	void StartLockOn(const FInputActionValue& Value);
-	void StopLockOn(const FInputActionValue& Value);
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -122,9 +114,6 @@ public:
 
 	// 매 프레임 호출해서 위치를 맞추고 '가짜 속도'를 주입하는 함수
 	void SyncTransform(float DeltaTime);
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	ASFCharacter* LockOnTarget;
 
 	// 기본공격 콤보
 	int32 ComboIndex = 0;

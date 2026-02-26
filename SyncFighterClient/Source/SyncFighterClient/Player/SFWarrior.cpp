@@ -9,7 +9,7 @@ void ASFWarrior::ProcessBasicAttack()
 {
 	Super::ProcessBasicAttack();
 
-	if (CurrentState == ECharacterState::Attacking)
+	if (CurrentState == ECharacterState::BasicAttacking)
 	{
 		// 공격 도중 클릭 시 -> 다음 콤보 예약
 		if (ComboIndex < 4)

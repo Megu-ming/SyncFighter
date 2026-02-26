@@ -84,6 +84,8 @@ SyncFighterClient/Intermediate/
 SyncFighterClient/Saved/
 SyncFighterClient/.vs/
 SyncFighterClient/*.sln
+SyncFighterClient/Content/ParagonGideon/
+SyncFighterClient/Content/ParagonKwang/
 
 #########################
 # C++ IOCP Server (Server)
