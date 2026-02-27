@@ -105,7 +105,7 @@ public:
 	class UWidgetComponent* HPBarComponent;
 
 	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<class UUserWidget> CrosshairWidgetClass; // 에디터에서 넣을 빈칸
+	TSubclassOf<class UUserWidget> CrosshairWidgetClass;
 
 	UPROPERTY()
 	class UUserWidget* CrosshairWidget;
@@ -127,4 +127,9 @@ public:
 	// 애니메이션 노티파이에서 호출할 콤보 체크 함수
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CheckNextCombo();
+
+public:
+	// 멀티플레이 식별용 ID
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Network")
+	int32 PlayerID = -1;
 };

@@ -12,10 +12,14 @@ class SYNCFIGHTERCLIENT_API ASFMage : public ASFCharacter
 	GENERATED_BODY()
 	
 public:
+	virtual void Tick(float DeltaTime) override;
+
+public:
 	virtual void EndState() override;
 
 	virtual void ProcessBasicAttack() override;
 	virtual void ProcessSkillQ() override;
+	void PlayRemoteSkillQ(FVector TargetLoc);
 	virtual void ProcessSkillE() override;
 
 	// --- [투사체(마법) 블루프린트 할당 칸] ---
@@ -31,6 +35,16 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillEMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	TSubclassOf<AActor> SkillIndicatorClass;
+
+	// 2. 현재 맵에 띄워둔 장판 액터를 기억할 포인터
+	UPROPERTY()
+	AActor* CurrentIndicator;
+
+	// 3. 조준 중인지 확인하는 깃발(Flag)
+	bool bIsAimingQ = false;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")

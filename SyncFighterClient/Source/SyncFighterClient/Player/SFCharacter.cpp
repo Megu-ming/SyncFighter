@@ -63,15 +63,6 @@ void ASFCharacter::EndState()
 void ASFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (IsLocallyControlled() && CrosshairWidgetClass)
-	{
-		CrosshairWidget = CreateWidget<UUserWidget>(GetWorld(), CrosshairWidgetClass);
-		if (CrosshairWidget)
-		{
-			CrosshairWidget->AddToViewport(); // 화면에 부착!
-		}
-	}
 }
 
 void ASFCharacter::Move(const FInputActionValue& Value)
@@ -130,8 +121,6 @@ void ASFCharacter::SkillQ(const FInputActionValue& Value)
 
 	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillQ();
-
-	// TODO: 서버로 Q스킬 패킷 전송
 }
 
 void ASFCharacter::SkillE(const FInputActionValue& Value)
@@ -140,8 +129,6 @@ void ASFCharacter::SkillE(const FInputActionValue& Value)
 
 	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillE();
-
-	// TODO: 서버로 E스킬 패킷 전송
 }
 
 void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -172,6 +159,15 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
+
+	if (CrosshairWidgetClass && CrosshairWidget == nullptr)
+	{
+		CrosshairWidget = CreateWidget<UUserWidget>(GetWorld(), CrosshairWidgetClass);
+		if (CrosshairWidget)
+		{
+			CrosshairWidget->AddToViewport(); // 화면에 부착!
+		}
 	}
 }
 
