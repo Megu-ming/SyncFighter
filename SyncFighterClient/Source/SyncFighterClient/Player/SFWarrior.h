@@ -23,4 +23,14 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillEMontage;
+
+public:
+	UPROPERTY()
+	TArray<AActor*> HitActors;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void BeginMeleeAttack();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void CheckMeleeHit();
 };
