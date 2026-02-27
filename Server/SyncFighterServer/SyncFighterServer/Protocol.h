@@ -10,6 +10,8 @@ enum PacketID : int32_t // int32로 통일
 	C_TO_S_PLAYER_ATTACK = 2,
 	S_TO_C_DAMAGE = 3,
 	S_TO_C_RESPAWN = 4,
+	C_TO_S_HIT_REQ = 5,
+	C_TO_S_PLAYER_SKILL = 6,
 
 	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
 	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
@@ -90,6 +92,12 @@ struct PacketPlayerAttack : public PacketHeader
 	int32_t PlayerID;
 };
 
+struct PacketPlayerSkill : public PacketHeader
+{
+	int32_t PlayerID;
+	int32_t SkillIndex; // 0: Q스킬, 1: E스킬 등 인덱스로 구분
+};
+
 struct PacketDamage : public PacketHeader
 {
 	int32_t VictimID;    // 맞은 사람 ID
@@ -102,6 +110,13 @@ struct PacketRespawn : public PacketHeader
 {
 	int32_t PlayerID;
 	float X, Y, Z; // 부활 위치
+};
+
+// 타격 제보 패킷 구조체
+struct PacketHitReq : public PacketHeader
+{
+	int32_t VictimID;   // 맞은 사람
+	int32_t Damage;     // 가한 데미지
 };
 #pragma endregion
 

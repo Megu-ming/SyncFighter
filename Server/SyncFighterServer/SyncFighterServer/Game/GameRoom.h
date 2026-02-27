@@ -13,11 +13,11 @@ class GameRoom
 public:
 	GameRoom();
 
+	Session* FindSession(int32_t id);
+
 	void Enter(Session* session); // 입장
 	void Leave(Session* session); // 퇴장
 	void Broadcast(void* packet, int32_t size, Session* exceptMe = nullptr); // 뿌리기
-
-	void HandleAttack(Session* attacker);
 
 	void Respawn(int32_t sessionId);
 private:

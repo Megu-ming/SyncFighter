@@ -33,6 +33,12 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
 	case C_TO_S_PLAYER_ATTACK:
 		HandlePlayerAttack(session, (PacketPlayerAttack*)buffer);
 		break;
+    case C_TO_S_PLAYER_SKILL:
+        HandlePlayerSkill(session, (PacketPlayerSkill*)buffer);
+        break;
+    case C_TO_S_HIT_REQ:
+        HandleHitReq(session, (PacketHitReq*)buffer);
+        break;
     case C_TO_S_CHAT:
         HandleChat(session, (PacketChat*)buffer);
         break;
@@ -154,7 +160,59 @@ void PacketHandler::HandlePlayerAttack(Session* session, PacketPlayerAttack* pac
 	// 방에 뿌리기
 	GGameRoom.Broadcast(packet, packet->Size, session);
 
-	GGameRoom.HandleAttack(session);
+	//GGameRoom.HandleAttack(session);
+}
+
+void PacketHandler::HandlePlayerSkill(Session* session, PacketPlayerSkill* packet)
+{
+    packet->PlayerID = session->_id;
+    std::cout << "[User " << session->_id << "] " << packet->SkillIndex << " Skill!" << std::endl;
+
+    GGameRoom.Broadcast(packet, packet->Size, session);
+}
+
+void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
+{
+    // 서버에서 관리하는 유저의 체력을 깎아야 하지만,
+    Session* VictimSession = GGameRoom.FindSession(packet->VictimID);
+
+    if (VictimSession != nullptr) 
+    {
+        if (VictimSession == session) return;
+        if (VictimSession->_isDead) return;
+
+        // 2. 체력 차감
+        VictimSession->_hp -= packet->Damage;
+        if (VictimSession->_hp <= 0)
+        {
+            VictimSession->_hp = 0;
+            VictimSession->_isDead = true;
+
+            int32_t victimId = VictimSession->_id;
+
+            std::thread([victimId]() {
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+                GGameRoom.Respawn(victimId); // 5초 뒤 부활!
+                }).detach();
+        }
+
+        // 3. 데미지 결과 패킷 세팅
+        PacketDamage ResPkt = {};
+        ResPkt.Size = sizeof(PacketDamage);
+        ResPkt.Id = S_TO_C_DAMAGE;
+
+        ResPkt.AttackerID = session->_id;       // 때린 사람
+        ResPkt.VictimID = packet->VictimID;     // 맞은 사람
+        ResPkt.DamageAmount = packet->Damage;   // 들어간 데미지
+        ResPkt.RemainingHP = VictimSession->_hp; // ★ 진짜 남은 체력!
+
+        std::cout << "[Hit] 유저 " << session->_id << " -> 유저 " << packet->VictimID
+            << " 타격! (데미지: " << packet->Damage
+            << " / 남은 체력: " << VictimSession->_hp << ")" << std::endl;
+
+        // 4. 방에 있는 모두에게 데미지 결과 브로드캐스팅
+        GGameRoom.Broadcast(&ResPkt, ResPkt.Size);
+    }
 }
 
 void PacketHandler::HandleChat(Session* session, PacketChat* packet)
