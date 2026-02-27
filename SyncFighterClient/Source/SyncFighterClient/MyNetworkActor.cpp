@@ -7,6 +7,7 @@
 #include "Components/WidgetComponent.h"
 #include "UI/SFHPBarWidget.h"
 #include "Player/SFCharacter.h"
+#include "Player/SFMage.h"
 
 // Sets default values
 AMyNetworkActor::AMyNetworkActor()
@@ -34,6 +35,7 @@ void AMyNetworkActor::BeginPlay()
 
 			// 1. 소환!
 			ASFCharacter* MyChar = GetWorld()->SpawnActor<ASFCharacter>(MySpawnClass, SpawnLoc, SpawnRot);
+			MyChar->PlayerID = GI->MyPlayerID;
 
 			// 2. 빙의! (키보드/마우스 컨트롤 연결)
 			APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
@@ -148,22 +150,19 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						FVector SpawnLoc(Packet->X, Packet->Y, Packet->Z);
 						FRotator SpawnRot(0, Packet->Yaw, 0);
 						FActorSpawnParameters SpawnParams;
-						ASFCharacter* NewActor = GetWorld()->SpawnActor<ASFCharacter>(SpawnClass, SpawnLoc, SpawnRot, SpawnParams);
+						ASFCharacter* NewChar = GetWorld()->SpawnActor<ASFCharacter>(SpawnClass, SpawnLoc, SpawnRot, SpawnParams);
 
-						if (NewActor)
+						if (NewChar)
 						{
 							FRemotePlayerInfo NewInfo;
-							NewInfo.Character = NewActor;
+							NewInfo.Character = NewChar;
 							NewInfo.TargetPos = SpawnLoc;
 							NewInfo.TargetRot = SpawnRot;
 							RemotePlayers.Add(Packet->PlayerID, NewInfo);
 
-							ACharacter* NewChar = Cast<ACharacter>(NewActor);
-							if (NewChar)
-							{
-								NewChar->SetReplicates(false);
-								NewChar->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-							}
+							NewChar->PlayerID = Packet->PlayerID;
+							NewChar->SetReplicates(false);
+							NewChar->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 						}
 					}
 				}
@@ -187,6 +186,36 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					if (Character)
 					{
 						Character->ProcessBasicAttack();
+					}
+				}
+			}
+			else if (Header->Id == C_TO_S_PLAYER_SKILL)
+			{
+				PacketPlayerSkill* SkillPkt = (PacketPlayerSkill*)(Buffer + ProcessedBytes);
+
+				if (SkillPkt->PlayerID == GI->MyPlayerID)
+				{
+					ProcessedBytes += Header->Size;
+					continue;
+				}
+
+				if (RemotePlayers.Contains(SkillPkt->PlayerID))
+				{
+					ASFCharacter* Caster = RemotePlayers[SkillPkt->PlayerID].Character;
+
+					ASFMage* MageChar = Cast<ASFMage>(Caster);
+					if (MageChar)
+					{
+						if (SkillPkt->SkillIndex == 0) // 0번(Q스킬) 이라면!
+						{
+							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
+							MageChar->PlayRemoteSkillQ(TargetLoc); // 재생함수 호출
+						}
+						else
+						{
+							MageChar->ProcessSkillE();
+							UE_LOG(LogTemp, Warning, TEXT("[User %d] E스킬 시전!"), SkillPkt->PlayerID);
+						}
 					}
 				}
 			}

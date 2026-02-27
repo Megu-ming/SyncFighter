@@ -58,6 +58,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Network|Chat")
 	void SendChatMessage(FString Message);
 
+	UFUNCTION(BlueprintCallable, Category = "Network|Hit")
+	void SendHitReq(int32 VictimID, int32 Damage);
+
+	UFUNCTION(BlueprintCallable, Category = "Network|Skill")
+	void SendSkillPacket(int32 SkillIndex, FVector TargetLoc);
+
 public:
 	FSocket* Socket;
 	FString ServerIP = "127.0.0.1";

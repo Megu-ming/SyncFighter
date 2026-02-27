@@ -152,3 +152,34 @@ void USFGameInstance::SendChatMessage(FString Message)
 
 	SendPacket(&Pkt, sizeof(Pkt));
 }
+
+void USFGameInstance::SendHitReq(int32 VictimID, int32 Damage)
+{
+	PacketHitReq Pkt = {};
+
+	Pkt.Size = sizeof(PacketHitReq);
+	Pkt.Id = C_TO_S_HIT_REQ;
+
+	Pkt.VictimID = VictimID;
+	Pkt.Damage = Damage;
+
+	SendPacket(&Pkt, sizeof(Pkt));
+
+	UE_LOG(LogTemp, Warning, TEXT("[Hit Req 전송] 앗싸 명중! 맞은 유저: %d / 데미지: %d"), VictimID, Damage);
+}
+
+void USFGameInstance::SendSkillPacket(int32 SkillIndex, FVector TargetLoc)
+{
+	PacketPlayerSkill Pkt = {};
+	Pkt.Size = sizeof(PacketPlayerSkill);
+	Pkt.Id = C_TO_S_PLAYER_SKILL;
+	Pkt.PlayerID = MyPlayerID;
+	Pkt.SkillIndex = SkillIndex;
+
+	Pkt.TargetX = TargetLoc.X;
+	Pkt.TargetY = TargetLoc.Y;
+	Pkt.TargetZ = TargetLoc.Z;
+
+	SendPacket(&Pkt, sizeof(Pkt));
+	UE_LOG(LogTemp, Log, TEXT("스킬 패킷 전송! (Index: %d)"), SkillIndex);
+}
