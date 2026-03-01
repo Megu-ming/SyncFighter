@@ -8,6 +8,7 @@
 #include "UI/SFHPBarWidget.h"
 #include "Player/SFCharacter.h"
 #include "Player/SFMage.h"
+#include "Player/SFWarrior.h"
 
 // Sets default values
 AMyNetworkActor::AMyNetworkActor()
@@ -215,6 +216,19 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						{
 							MageChar->ProcessSkillE();
 							UE_LOG(LogTemp, Warning, TEXT("[User %d] E스킬 시전!"), SkillPkt->PlayerID);
+						}
+					}
+					else
+					{
+						ASFWarrior* WarriorChar = Cast<ASFWarrior>(Caster);
+						if (SkillPkt->SkillIndex == 0)
+						{
+							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
+							WarriorChar->PlayRemoteSkillQ(TargetLoc);
+						}
+						else
+						{
+							WarriorChar->ProcessSkillE();
 						}
 					}
 				}

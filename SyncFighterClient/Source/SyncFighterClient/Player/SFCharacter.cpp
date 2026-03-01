@@ -119,7 +119,6 @@ void ASFCharacter::SkillQ(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
 
-	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillQ();
 }
 
@@ -127,7 +126,6 @@ void ASFCharacter::SkillE(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
 
-	CurrentState = ECharacterState::SkillAttacking;
 	ProcessSkillE();
 }
 
