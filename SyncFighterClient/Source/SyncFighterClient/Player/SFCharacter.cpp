@@ -66,6 +66,8 @@ void ASFCharacter::EndState()
 void ASFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CurrentState = ECharacterState::Stunned; // LevelStart 몽타주 재생 때 못움직이게 하기 위함
 }
 
 void ASFCharacter::Move(const FInputActionValue& Value)

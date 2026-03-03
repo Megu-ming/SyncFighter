@@ -25,6 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillEMontage;
 
+#pragma region Q스킬 관련
 	// Q 스킬 변수 및 함수
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
@@ -65,7 +66,19 @@ public:
 	// 무기를 회수 중일 때 True
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsRecalled = false;
+#pragma endregion
 
+public:
+#pragma region E스킬 관련
+	// E스킬 몽타주에서 호출할 함수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillEIntroMontage;
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Teleport();
+
+#pragma endregion
+
+#pragma region 기본공격 관련
 	// 기본공격
 	UPROPERTY()
 	TArray<AActor*> HitActors;
@@ -75,6 +88,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CheckMeleeHit();
+#pragma endregion
 
 	void CancelAiming();
 };

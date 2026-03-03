@@ -114,26 +114,33 @@ void ASFWarrior::ProcessSkillQ()
 
 void ASFWarrior::ProcessSkillE()
 {
+	// 1. 조준 중이었다면 취소
 	CancelAiming();
-	if (bIsWeaponThrown) RecallWeapon();
-	if (bIsRecalled)
+
+	CurrentState = ECharacterState::SkillAttacking;
+	if (bIsWeaponThrown)
 	{
-		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-		if (GI && IsLocallyControlled())
+		// 1. 칼이 바닥에 있을 때: 기 모으기(Intro)만 재생하고 기다립니다.
+		if (SkillEIntroMontage)
 		{
-			GI->SendSkillPacket(1, GetActorLocation()); // 1번 = E스킬
+			PlayAnimMontage(SkillEIntroMontage, 1.0f);
 		}
-		return;
+	}
+	else
+	{
+		// 2. 칼이 내 손에 있을 때: 텔레포트 없이 제자리에서 바로 크게 휘두릅니다.
+		if (SkillEMontage)
+		{
+			PlayAnimMontage(SkillEMontage, 1.0f);
+		}
 	}
 
-	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
-
-	// 2. 서버로 E스킬 사용 제보
+	// 3. 패킷은 E를 누른 즉시 무조건 보냅니다! (서버도 똑같이 애니메이션을 틀어야 하니까요)
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI && IsLocallyControlled())
 	{
-		GI->SendSkillPacket(0, GetActorLocation());
-		UE_LOG(LogTemp, Warning, TEXT("[전사] 쾅 E스킬 시전!"));
+		GI->SendSkillPacket(1, GetActorLocation());
+		UE_LOG(LogTemp, Warning, TEXT("[전사] E스킬 시전 패킷 전송!"));
 	}
 }
 
@@ -280,4 +287,26 @@ void ASFWarrior::RecallWeapon()
 void ASFWarrior::EndRecalled()
 {
 	bIsRecalled = false;
+}
+
+void ASFWarrior::Teleport()
+{
+	FVector DestLoc = SkillQTargetLoc;
+	DestLoc.Z += 90.0f;
+	SetActorLocation(DestLoc);
+
+	bIsWeaponThrown = false;
+	if (IsValid(GroundedSword))
+	{
+		GroundedSword->Destroy();
+		GroundedSword = nullptr;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[전사] 텔레포트 완료! 휘두르기 공격 연계 시작!"));
+
+	// 3. 순간이동이 끝났으니, 이제 크게 휘두르는 진짜 공격 애니메이션으로 자연스럽게 바통 터치!
+	if (SkillEMontage)
+	{
+		PlayAnimMontage(SkillEMontage, 1.0f);
+	}
 }
