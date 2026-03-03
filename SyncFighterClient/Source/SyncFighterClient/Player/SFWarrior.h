@@ -75,4 +75,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CheckMeleeHit();
+
+	void CancelAiming();
 };

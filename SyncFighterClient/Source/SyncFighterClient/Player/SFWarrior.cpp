@@ -34,6 +34,7 @@ void ASFWarrior::EndState()
 
 void ASFWarrior::ProcessBasicAttack()
 {
+	CancelAiming();
 	if (bIsWeaponThrown) RecallWeapon();
 	if (bIsRecalled)
 	{
@@ -57,7 +58,20 @@ void ASFWarrior::ProcessBasicAttack()
 void ASFWarrior::ProcessSkillQ()
 {
 	if (bIsWeaponThrown) RecallWeapon();
-	if (bIsRecalled) return;
+	if (bIsRecalled)
+	{
+		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+		if (GI && IsLocallyControlled())
+		{
+			PacketPlayerAttack AttackPkt;
+			AttackPkt.Size = sizeof(PacketPlayerAttack);
+			AttackPkt.Id = C_TO_S_PLAYER_ATTACK;
+			AttackPkt.PlayerID = GI->MyPlayerID;
+
+			GI->SendPacket(&AttackPkt, sizeof(AttackPkt));
+		}
+		return;
+	}
 
 	if (!bIsAimingQ)
 	{
@@ -100,6 +114,7 @@ void ASFWarrior::ProcessSkillQ()
 
 void ASFWarrior::ProcessSkillE()
 {
+	CancelAiming();
 	if (bIsWeaponThrown) RecallWeapon();
 	if (bIsRecalled)
 	{
@@ -222,6 +237,25 @@ void ASFWarrior::CheckMeleeHit()
 				UE_LOG(LogTemp, Warning, TEXT("[전사] 궤적 타격 적중! 대상 ID: %d"), HitChar->PlayerID);
 			}
 		}
+	}
+}
+
+/// <summary>
+/// 조준(스킬 시전 전) 동작 해제 함수
+/// </summary>
+void ASFWarrior::CancelAiming()
+{
+	if (bIsAimingQ)
+	{
+		bIsAimingQ = false;
+
+		if (CurrentIndicator)
+		{
+			CurrentIndicator->Destroy();
+			CurrentIndicator = nullptr;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[전사] 다른 입력 감지: 조준 강제 취소!"));
 	}
 }
 
