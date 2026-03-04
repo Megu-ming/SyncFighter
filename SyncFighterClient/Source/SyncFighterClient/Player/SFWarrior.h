@@ -76,6 +76,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void Teleport();
 
+	UFUNCTION(BlueprintCallable, Category = "Skill")
+	void ApplySkillEDamage();
 #pragma endregion
 
 #pragma region 기본공격 관련
@@ -88,6 +90,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CheckMeleeHit();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	int32 CurrentMeleeDamage = 15;
 #pragma endregion
 
 	void CancelAiming();

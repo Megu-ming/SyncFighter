@@ -51,7 +51,7 @@ void ASFWarrior::ProcessBasicAttack()
 		}
 		return;
 	}
-
+	CurrentMeleeDamage = 15;
 	Super::ProcessBasicAttack();
 }
 
@@ -118,6 +118,7 @@ void ASFWarrior::ProcessSkillE()
 	CancelAiming();
 
 	CurrentState = ECharacterState::SkillAttacking;
+	CurrentMeleeDamage = 30;
 	if (bIsWeaponThrown)
 	{
 		// 1. 칼이 바닥에 있을 때: 기 모으기(Intro)만 재생하고 기다립니다.
@@ -213,18 +214,8 @@ void ASFWarrior::CheckMeleeHit()
 	FHitResult HitResult;
 
 	bool bHit = UKismetSystemLibrary::SphereTraceSingleForObjects(
-		GetWorld(),
-		StartLoc,
-		EndLoc,
-		30.0f,
-		ObjectTypes, 
-		false,
-		HitActors,
-		EDrawDebugTrace::ForDuration,
-		HitResult,
-		true,
-		FLinearColor::Red, FLinearColor::Green, 2.0f
-	);
+		GetWorld(),	StartLoc, EndLoc, 30.0f, ObjectTypes, false, HitActors,
+		EDrawDebugTrace::ForDuration, HitResult, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
 
 	if (bHit && HitResult.GetActor())
 	{
@@ -240,7 +231,7 @@ void ASFWarrior::CheckMeleeHit()
 			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 			if (GI)
 			{
-				GI->SendHitReq(HitChar->PlayerID, 15);
+				GI->SendHitReq(HitChar->PlayerID, CurrentMeleeDamage);
 				UE_LOG(LogTemp, Warning, TEXT("[전사] 궤적 타격 적중! 대상 ID: %d"), HitChar->PlayerID);
 			}
 		}
@@ -304,9 +295,46 @@ void ASFWarrior::Teleport()
 
 	UE_LOG(LogTemp, Warning, TEXT("[전사] 텔레포트 완료! 휘두르기 공격 연계 시작!"));
 
-	// 3. 순간이동이 끝났으니, 이제 크게 휘두르는 진짜 공격 애니메이션으로 자연스럽게 바통 터치!
 	if (SkillEMontage)
 	{
 		PlayAnimMontage(SkillEMontage, 1.0f);
+	}
+}
+
+void ASFWarrior::ApplySkillEDamage()
+{
+	if (!IsLocallyControlled()) return;
+	FVector DamageLoc = GetActorLocation(); // 내 캐릭터의 현재 위치 (텔레포트를 했다면 적진 한가운데!)
+	float DamageRadius = 400.0f;
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+
+	TArray<AActor*> OutActors;
+
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		GetWorld(), DamageLoc, DamageRadius, ObjectTypes, nullptr, ActorsToIgnore, OutActors
+	);
+
+	if (bHit)
+	{
+		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+		if (GI)
+		{
+			for (AActor* HitActor : OutActors)
+			{
+				ASFCharacter* HitChar = Cast<ASFCharacter>(HitActor);
+				// 찾은 액터가 캐릭터이고, 나 자신이 아니라면?
+				if (HitChar && HitChar != this)
+				{
+					// 서버로 묵직한 데미지(예: 60)를 꽂아 넣으라고 제보합니다!
+					GI->SendHitReq(HitChar->PlayerID, 60);
+					UE_LOG(LogTemp, Warning, TEXT("[전사] E스킬 광역 폭발 적중! 대상 ID: %d"), HitChar->PlayerID);
+				}
+			}
+		}
 	}
 }

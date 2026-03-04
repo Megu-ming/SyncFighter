@@ -35,6 +35,6 @@ public:
 	int32_t _classType;
 
 	float _x = 0, _y = 0, _z = 0, _yaw = 0; // 위치 기억
-	int32_t _hp = 100;                      // 체력
+	int32_t _hp = 9999;                      // 체력
 	bool _isDead = false;                   // 사망 여부
 };
