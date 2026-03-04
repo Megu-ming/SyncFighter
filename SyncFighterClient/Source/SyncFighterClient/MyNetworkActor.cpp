@@ -210,12 +210,12 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						if (SkillPkt->SkillIndex == 0) // 0번(Q스킬) 이라면!
 						{
 							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
-							MageChar->PlayRemoteSkillQ(TargetLoc); // 재생함수 호출
+							MageChar->PlayRemoteSkillQ(TargetLoc);
 						}
 						else
 						{
-							MageChar->ProcessSkillE();
-							UE_LOG(LogTemp, Warning, TEXT("[User %d] E스킬 시전!"), SkillPkt->PlayerID);
+							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
+							MageChar->PlayRemoteSkillE(TargetLoc);
 						}
 					}
 					else

@@ -70,6 +70,31 @@ void ASFCharacter::BeginPlay()
 	CurrentState = ECharacterState::Stunned; // LevelStart 몽타주 재생 때 못움직이게 하기 위함
 }
 
+void ASFCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// ==========================================
+	// ★ 신규 추가: 블랙홀에 빠졌다면 매 프레임 중심부로 끌려갑니다!
+	// ==========================================
+	if (bIsInBlackHole && IsLocallyControlled())
+	{
+		FVector MyLoc = GetActorLocation();
+		FVector Dir = (BlackHoleCenterLoc - MyLoc).GetSafeNormal();
+		float Dist = FVector::Dist(BlackHoleCenterLoc, MyLoc);
+
+		if (Dist > 50.0f) // 중심에 너무 깊이 파고들지 않도록 방어
+		{
+			// 초당 300 유닛의 속도로 끌어당김 (DeltaTime을 곱해 프레임 렉 방어)
+			FVector PullDelta = Dir * 120.0f * DeltaTime;
+			PullDelta.Z = 0.0f; // 공중으로 뜨는 것 방지
+
+			// Sweep을 true로 주어 벽을 뚫고 끌려가지 않도록 함
+			AddActorWorldOffset(PullDelta, true);
+		}
+	}
+}
+
 void ASFCharacter::Move(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle 
@@ -229,7 +254,7 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 		USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(HPBarComponent->GetUserWidgetObject());
 		if (HPWidget)
 		{
-			HPWidget->UpdateHP((float)RemainingHP, 100.0f);
+			HPWidget->UpdateHP((float)RemainingHP, 9999.0f);
 		}
 	}
 
@@ -342,6 +367,27 @@ void ASFCharacter::CheckNextCombo()
 				GI->SendPacket(&AttackPacket, sizeof(AttackPacket));
 				UE_LOG(LogTemp, Log, TEXT("[캐릭터] %d타 패킷 전송"), ComboIndex);
 			}
+		}
+	}
+}
+
+void ASFCharacter::SetBlackHoleState(bool bState, FVector CenterLoc)
+{
+	bIsInBlackHole = bState;
+	BlackHoleCenterLoc = CenterLoc;
+
+	if (GetCharacterMovement())
+	{
+		if (bState)
+		{
+			// 블랙홀에 걸리는 순간, 원래 속도를 기억하고 200으로 슬로우 팍!
+			OriginalWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+			GetCharacterMovement()->MaxWalkSpeed = 200.0f;
+		}
+		else
+		{
+			// 블랙홀이 끝나면 원래 속도로 원상 복구!
+			GetCharacterMovement()->MaxWalkSpeed = OriginalWalkSpeed;
 		}
 	}
 }

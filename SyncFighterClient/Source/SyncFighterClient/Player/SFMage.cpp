@@ -2,6 +2,8 @@
 #include "Camera/CameraComponent.h" 
 #include "Kismet/KismetMathLibrary.h"
 #include "SyncFighterClient/SFGameInstance.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void ASFMage::Tick(float DeltaTime)
 {
@@ -28,24 +30,24 @@ void ASFMage::Tick(float DeltaTime)
 
 void ASFMage::EndState()
 {
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
 	Super::EndState();
 }
 
 void ASFMage::ProcessBasicAttack()
 {
+	CancelAiming();
+
 	Super::ProcessBasicAttack();
 }
 
 void ASFMage::ProcessSkillQ()
 {
-	// ==========================================
-	// 1. 첫 번째 Q 입력 (조준 시작)
-	// ==========================================
 	if (!bIsAimingQ)
 	{
 		bIsAimingQ = true;
 
-		// 발밑에 장판 액터 소환
 		if (SkillIndicatorClass)
 		{
 			CurrentIndicator = GetWorld()->SpawnActor<AActor>(SkillIndicatorClass, GetActorLocation(), FRotator::ZeroRotator);
@@ -53,9 +55,6 @@ void ASFMage::ProcessSkillQ()
 
 		UE_LOG(LogTemp, Warning, TEXT("[기데온] Q 스킬 조준 시작!"));
 	}
-	// ==========================================
-	// 2. 두 번째 Q 입력 (스킬 진짜 발사!)
-	// ==========================================
 	else
 	{
 		bIsAimingQ = false; // 조준 끝!
@@ -63,12 +62,9 @@ void ASFMage::ProcessSkillQ()
 		if (CurrentIndicator)
 		{
 			FVector FinalTargetLoc = CurrentIndicator->GetActorLocation();
-
-			// 할 일 다 한 장판은 파괴
 			CurrentIndicator->Destroy();
 			CurrentIndicator = nullptr;
 
-			if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.2f);
 			if (!SkillQMagicClass) return;
 
 			if (IsLocallyControlled() && FollowCamera)
@@ -83,17 +79,14 @@ void ASFMage::ProcessSkillQ()
 
 				if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLoc, EndLoc, ECC_Visibility, CollisionParams))
 				{
-					FVector TargetGroundLoc = HitResult.ImpactPoint;
+					// ★ 1. 스폰은 하지 말고, 찾아낸 타겟 좌표를 변수에 예쁘게 저장만 해둡니다!
+					SkillQTargetLoc = HitResult.ImpactPoint;
 
-					// 1. 서버에 좌표 제보!
 					USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-					if (GI) GI->SendSkillPacket(0, TargetGroundLoc);
+					if (GI) GI->SendSkillPacket(0, SkillQTargetLoc);
 
-					// 2. 내 화면에 이펙트 소환!
-					FActorSpawnParameters SpawnParams;
-					SpawnParams.Owner = this;
-					SpawnParams.Instigator = this;
-					GetWorld()->SpawnActor<AActor>(SkillQMagicClass, TargetGroundLoc, FRotator::ZeroRotator, SpawnParams);
+					// 몽타주 재생 (이제 몽타주가 재생되다가 노티파이를 부를 겁니다)
+					if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.0f);
 				}
 			}
 		}
@@ -103,25 +96,55 @@ void ASFMage::ProcessSkillQ()
 
 void ASFMage::PlayRemoteSkillQ(FVector TargetLoc)
 {
-	if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.2f); // 남의 캐릭터가 허우적거리는 모션 재생
+	SkillQTargetLoc = TargetLoc; // ★ 남의 Q스킬도 좌표만 기억!
+	if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.0f);
+}
+
+void ASFMage::ProcessSkillE()
+{
+	CancelAiming();
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+
+	SkillETargetLoc = GetActorLocation();
+	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
+
+	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+	if (GI && IsLocallyControlled())
+	{
+		GI->SendSkillPacket(1, GetActorLocation());
+	}
+}
+
+void ASFMage::PlayRemoteSkillE(FVector TargetLoc)
+{
+	SkillETargetLoc = TargetLoc;
+	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
+
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+}
+
+void ASFMage::SpawnSkillQMagic()
+{
 	if (SkillQMagicClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = this;
-
-		GetWorld()->SpawnActor<AActor>(SkillQMagicClass, TargetLoc, FRotator::ZeroRotator);
+		// 기억해둔 좌표에 스폰!
+		GetWorld()->SpawnActor<AActor>(SkillQMagicClass, SkillQTargetLoc, FRotator::ZeroRotator, SpawnParams);
 	}
 }
 
-void ASFMage::ProcessSkillE()
+void ASFMage::SpawnSkillEMagic()
 {
-	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
-
-	// E 스킬 (중력장)은 투사체가 아니라 내 주변에 장판이 깔리는 것이므로, 
-	// 나중에 파티클 시스템(VFX)을 직접 내 몸체에 Attach 하거나, 별도의 장판 액터를 발 밑에 스폰할 예정입니다.
-	EndState();
-	UE_LOG(LogTemp, Log, TEXT("[마법사] E 스킬 시전: 중력장 전개!"));
+	if (SkillEMagicClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = this;
+		// 기억해둔 좌표(기데온 본체)에 스폰!
+		GetWorld()->SpawnActor<AActor>(SkillEMagicClass, SkillETargetLoc, FRotator::ZeroRotator, SpawnParams);
+	}
 }
 
 void ASFMage::FireMagic(FName SocketName)
@@ -154,4 +177,21 @@ void ASFMage::FireMagic(FName SocketName)
 
 	if(IsLocallyControlled())
 		UE_LOG(LogTemp, Log, TEXT("[마법사] %s 소켓에서 파이어볼 발사!"), *SocketName.ToString());
+}
+
+void ASFMage::CancelAiming()
+{
+	if (bIsAimingQ)
+	{
+		bIsAimingQ = false; // 1. 조준 상태 해제
+
+		// 2. 바닥에 깔려있던 장판 파괴
+		if (CurrentIndicator)
+		{
+			CurrentIndicator->Destroy();
+			CurrentIndicator = nullptr;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[마법사] 다른 입력 감지: Q 스킬 조준 강제 취소!"));
+	}
 }

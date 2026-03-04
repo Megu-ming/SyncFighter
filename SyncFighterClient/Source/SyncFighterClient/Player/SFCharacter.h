@@ -44,6 +44,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -134,4 +135,17 @@ public:
 	// 멀티플레이 식별용 ID
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Network")
 	int32 PlayerID = -1;
+
+	// ==========================================
+	// ★ 신규 추가: 블랙홀 CC기 관련 변수 및 함수
+	// ==========================================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CC")
+	bool bIsInBlackHole = false;
+
+	FVector BlackHoleCenterLoc;
+	float OriginalWalkSpeed = 600.0f; // 원래 이동 속도를 기억해둘 변수
+
+	// 외부(기데온)에서 이 캐릭터에게 블랙홀 효과를 걸거나 푸는 함수
+	UFUNCTION(BlueprintCallable, Category = "CC")
+	void SetBlackHoleState(bool bState, FVector CenterLoc);
 };

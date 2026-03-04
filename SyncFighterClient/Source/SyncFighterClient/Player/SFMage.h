@@ -21,6 +21,7 @@ public:
 	virtual void ProcessSkillQ() override;
 	void PlayRemoteSkillQ(FVector TargetLoc);
 	virtual void ProcessSkillE() override;
+	void PlayRemoteSkillE(FVector TargetLoc);
 
 	// --- [투사체(마법) 블루프린트 할당 칸] ---
 	UPROPERTY(EditAnywhere, Category = "Combat|Magic")
@@ -33,8 +34,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillQMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
-	UAnimMontage* SkillEMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	TSubclassOf<AActor> SkillIndicatorClass;
@@ -46,7 +45,25 @@ public:
 	// 3. 조준 중인지 확인하는 깃발(Flag)
 	bool bIsAimingQ = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillEMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Magic")
+	TSubclassOf<class AActor> SkillEMagicClass;
+
+	FVector SkillQTargetLoc;
+	FVector SkillETargetLoc;
+
+	// 애니메이션 노티파이에서 호출할 실제 액터 스폰 함수
+	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
+	void SpawnSkillQMagic();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
+	void SpawnSkillEMagic();
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
 	void FireMagic(FName SocketName);
+
+	void CancelAiming();
 };
