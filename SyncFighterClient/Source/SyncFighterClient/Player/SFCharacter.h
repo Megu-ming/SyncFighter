@@ -91,6 +91,7 @@ public:
 	virtual void ProcessSkillE();
 
 	virtual void ProcessDamage(int32 RemainingHP); // 피격/사망 처리
+	virtual void ProcessDeath();
 	virtual void ProcessRespawn(FVector NewLocation); // 부활 처리
 
 	// 2. 변수들

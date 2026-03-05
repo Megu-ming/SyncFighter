@@ -9,6 +9,9 @@
 #include "Player/SFCharacter.h"
 #include "Player/SFMage.h"
 #include "Player/SFWarrior.h"
+#include "Player/State/SFPlayerState.h"
+#include "UI/HUD/SFHUDWidget.h"
+#include "UI/SFResultWidget.h"
 
 // Sets default values
 AMyNetworkActor::AMyNetworkActor()
@@ -50,6 +53,21 @@ void AMyNetworkActor::BeginPlay()
 
 				UE_LOG(LogTemp, Warning, TEXT("내 캐릭터 스폰 및 빙의 완료! (Class: %d)"), GI->MyClassType);
 			}
+		}
+
+		GI->RequestEnterGame(GI->MyClassType);
+	}
+
+	// HUD 위젯 생성 및 화면에 띄우기
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<USFHUDWidget>(GetWorld(), HUDWidgetClass);
+		if (HUDWidget)
+		{
+			HUDWidget->AddToViewport();
+			HUDWidget->UpdateTimer(RemainingMatchTime);
+			HUDWidget->UpdateMyScore(0, 0);
+			HUDWidget->UpdateEnemyScore(0, 0);
 		}
 	}
 }
@@ -119,6 +137,56 @@ void AMyNetworkActor::Tick(float DeltaTime)
 
 				UE_LOG(LogTemp, Warning, TEXT("접속 성공! 내 ID는 [%d]번 입니다."), GI->MyPlayerID);
 			}
+			else if (Header->Id == S_TO_C_GAME_OVER)
+			{
+				PacketGameOver* OverPkt = (PacketGameOver*)(Buffer + ProcessedBytes);
+
+				// 1. 내 캐릭터 조작 막기 (싸움 강제 중지)
+				APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+				APawn* MyPawn = PC ? PC->GetPawn() : nullptr;
+				if (PC && MyPawn)
+				{
+					MyPawn->DisableInput(PC);
+					// 결과창 클릭을 위해 마우스 커서 표시
+					FInputModeUIOnly UIInputMode;
+					PC->SetInputMode(UIInputMode);
+					PC->bShowMouseCursor = true;
+				}
+
+				// 2. 타이머 멈춤 & HUD 숨기기
+				GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+				if (HUDWidget) HUDWidget->SetVisibility(ESlateVisibility::Hidden);
+
+				// 3. 내 PlayerState에서 최종 점수 가져오기
+				ASFPlayerState* MyPS = Cast<ASFPlayerState>(PC->PlayerState);
+				int32 FinalKills = MyPS ? MyPS->Kills : 0;
+				int32 FinalDeaths = MyPS ? MyPS->Deaths : 0;
+
+				// 4. 결과창 띄우기
+				bool bIsWinner = (OverPkt->WinnerPlayerID == GI->MyPlayerID); // 내가 승리자인지 판별
+
+				if (ResultWidgetClass)
+				{
+					ResultWidget = CreateWidget<USFResultWidget>(GetWorld(), ResultWidgetClass);
+					if (ResultWidget)
+					{
+						ResultWidget->AddToViewport();
+						ResultWidget->SetResultInfo(bIsWinner, FinalKills, FinalDeaths);
+					}
+				}
+
+				UE_LOG(LogTemp, Warning, TEXT("게임 오버! 승리자 ID: %d"), OverPkt->WinnerPlayerID);
+			}
+			else if (Header->Id == S_TO_C_TIMER_SYNC)
+			{
+				PacketTimerSync* SyncPkt = (PacketTimerSync*)(Buffer + ProcessedBytes);
+
+				if (HUDWidget)
+				{
+					// 서버에서 받은 정확한 시간으로 화면의 UI를 갱신
+					HUDWidget->UpdateTimer(SyncPkt->RemainingTime);
+				}
+			}
 			else if (Header->Id == C_TO_S_PLAYER_MOVE)
 			{
 				PacketPlayerMove* Packet = (PacketPlayerMove*)(Buffer + ProcessedBytes);
@@ -152,11 +220,15 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						FRotator SpawnRot(0, Packet->Yaw, 0);
 						FActorSpawnParameters SpawnParams;
 						ASFCharacter* NewChar = GetWorld()->SpawnActor<ASFCharacter>(SpawnClass, SpawnLoc, SpawnRot, SpawnParams);
+						ASFPlayerState* NewPS = GetWorld()->SpawnActor<ASFPlayerState>();
 
-						if (NewChar)
+						if (NewChar && NewPS)
 						{
+							NewPS->SFPlayerID = Packet->PlayerID;
+
 							FRemotePlayerInfo NewInfo;
 							NewInfo.Character = NewChar;
+							NewInfo.PlayerState = NewPS;
 							NewInfo.TargetPos = SpawnLoc;
 							NewInfo.TargetRot = SpawnRot;
 							RemotePlayers.Add(Packet->PlayerID, NewInfo);
@@ -239,23 +311,75 @@ void AMyNetworkActor::Tick(float DeltaTime)
 
 				UE_LOG(LogTemp, Warning, TEXT("[Damage Packet] 맞은사람 ID: %d / 내 ID(GI): %d / 남은체력: %d"), DmgPkt->VictimID, GI->MyPlayerID, DmgPkt->RemainingHP);
 
+				ASFCharacter* VictimChar = nullptr;
+				ASFPlayerState* VictimPS = nullptr;
+				ASFPlayerState* AttackerPS = nullptr;
+
 				// 1. 대상 찾기
-				ASFCharacter* TargetChar = nullptr;
 				if (DmgPkt->VictimID == GI->MyPlayerID)
 				{
 					// 나 자신
 					UE_LOG(LogTemp, Error, TEXT("-> 앗! 내 캐릭터가 맞았다!")); // 빨간 글씨로 눈에 띄게!
-					TargetChar = Cast<ASFCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+					VictimChar = Cast<ASFCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+					// 내 PlayerState는 기본 컨트롤러에 붙어있음
+					VictimPS = Cast<ASFPlayerState>(UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerState);
 				}
 				else if (RemotePlayers.Contains(DmgPkt->VictimID))
 				{
 					// 적
-					TargetChar = Cast<ASFCharacter>(RemotePlayers[DmgPkt->VictimID].Character);
+					VictimChar = RemotePlayers[DmgPkt->VictimID].Character;
+					VictimPS = RemotePlayers[DmgPkt->VictimID].PlayerState;
 				}
 
-				if (TargetChar)
+				if (DmgPkt->AttackerID == GI->MyPlayerID)
 				{
-					TargetChar->ProcessDamage(DmgPkt->RemainingHP);
+					AttackerPS = Cast<ASFPlayerState>(UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerState);
+				}
+				else if (RemotePlayers.Contains(DmgPkt->AttackerID))
+				{
+					AttackerPS = RemotePlayers[DmgPkt->AttackerID].PlayerState;
+				}
+
+				if (VictimChar)
+				{
+					VictimChar->ProcessDamage(DmgPkt->RemainingHP);
+					if (AttackerPS) AttackerPS->AddDamage(DmgPkt->DamageAmount);
+
+					if (DmgPkt->RemainingHP <= 0)
+					{
+						VictimChar->ProcessDeath();
+						if (VictimPS) VictimPS->AddDeath();   // 죽은 사람 데스 증가
+						if (AttackerPS) AttackerPS->AddKill(); // 때린 사람 킬 증가
+
+						if (HUDWidget)
+						{
+							// 내가 때린 거면 내 점수 UI 갱신!
+							if (DmgPkt->AttackerID == GI->MyPlayerID && AttackerPS)
+							{
+								HUDWidget->UpdateMyScore(AttackerPS->Kills, AttackerPS->Deaths);
+							}
+							// 적이 날 때려죽인 거면 적 점수 UI 갱신!
+							else if (AttackerPS)
+							{
+								HUDWidget->UpdateEnemyScore(AttackerPS->Kills, AttackerPS->Deaths);
+							}
+
+							// 내가 맞은 거면 내 데스 UI 갱신!
+							if (DmgPkt->VictimID == GI->MyPlayerID && VictimPS)
+							{
+								HUDWidget->UpdateMyScore(VictimPS->Kills, VictimPS->Deaths);
+							}
+							// 적이 맞은 거면 적 데스 UI 갱신!
+							else if (VictimPS)
+							{
+								HUDWidget->UpdateEnemyScore(VictimPS->Kills, VictimPS->Deaths);
+							}
+						}
+
+						UE_LOG(LogTemp, Warning, TEXT("🔥 킬 발생! [%d]번 유저가 [%d]번 유저를 처치했습니다!"), DmgPkt->AttackerID, DmgPkt->VictimID);
+
+						// 나중에 여기에 우측 상단 킬 로그 UI를 띄우는 이벤트를 추가
+					}
 				}
 			}
 			else if (Header->Id == S_TO_C_RESPAWN) // 4번
@@ -313,5 +437,22 @@ void AMyNetworkActor::Tick(float DeltaTime)
 			// 2. 캐릭터 스스로 동기화하도록 명령
 			Info.Character->SyncTransform(DeltaTime);
 		}
+	}
+}
+
+void AMyNetworkActor::OnMatchTimerTick()
+{
+	RemainingMatchTime--;
+
+	if (HUDWidget)
+	{
+		HUDWidget->UpdateTimer(RemainingMatchTime);
+	}
+
+	if (RemainingMatchTime <= 0)
+	{
+		// 나중에 여기에 "게임 오버!" 처리와 결과창 띄우는 로직이 들어갑니다.
+		GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+		UE_LOG(LogTemp, Warning, TEXT("게임 종료!!"));
 	}
 }

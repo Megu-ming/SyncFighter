@@ -12,14 +12,16 @@ enum PacketID : int32
 	S_TO_C_RESPAWN = 4,
 	C_TO_S_HIT_REQ = 5,
 	C_TO_S_PLAYER_SKILL = 6,
+	S_TO_C_GAME_OVER = 7,
+	S_TO_C_TIMER_SYNC = 8,
 
 	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
 	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
 	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
 	C_TO_S_ENTER_GAME_REQ = 13, // C -> S 직업 선택 후 게임 입장 요청
 
-	C_TO_S_CHAT = 20, // 추가
-	S_TO_C_CHAT = 21, // 추가
+	C_TO_S_CHAT = 20,
+	S_TO_C_CHAT = 21,
 };
 
 struct PacketHeader
@@ -75,6 +77,17 @@ struct PacketRegisterReq : public PacketHeader
 struct PacketEnterGameReq : public PacketHeader
 {
 	int32 ClassType; // 선택한 직업 번호를 들고 게임 입장
+};
+
+struct PacketGameOver : public PacketHeader
+{
+	int32 WinnerPlayerID; // 킬 수가 가장 높은 승리자의 ID (무승부면 -1 처리 등)
+	// 필요하다면 최고 킬수, 누적 데미지 등 추가 통계 데이터도 여기에 담을 수 있습니다.
+};
+
+struct PacketTimerSync : public PacketHeader
+{
+	int32 RemainingTime; // 서버가 알려주는 정확한 남은 시간
 };
 
 struct PacketPlayerMove : public PacketHeader

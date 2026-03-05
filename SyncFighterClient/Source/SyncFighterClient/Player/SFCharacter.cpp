@@ -254,22 +254,21 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 		USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(HPBarComponent->GetUserWidgetObject());
 		if (HPWidget)
 		{
-			HPWidget->UpdateHP((float)RemainingHP, 9999.0f);
+			HPWidget->UpdateHP((float)RemainingHP, 300.0f);
 		}
 	}
+}
 
-	// 2. 사망 처리
-	if (RemainingHP <= 0 && CurrentState != ECharacterState::Dead)
-	{
-		CurrentState = ECharacterState::Dead;
-		if (DeathMontage) PlayAnimMontage(DeathMontage);
+void ASFCharacter::ProcessDeath()
+{
+	CurrentState = ECharacterState::Dead;
+	if (DeathMontage) PlayAnimMontage(DeathMontage);
 
-		// 캡슐 충돌 끄기 (시체 위로 걸어다닐 수 있게)
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 캡슐 충돌 끄기 (시체 위로 걸어다닐 수 있게)
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-		// 컨트롤러 입력 막기 (내 캐릭터인 경우만 해당됨)
-		if (Controller) DisableInput(Cast<APlayerController>(Controller));
-	}
+	// 컨트롤러 입력 막기 (내 캐릭터인 경우만 해당됨)
+	if (Controller) DisableInput(Cast<APlayerController>(Controller));
 }
 
 void ASFCharacter::ProcessRespawn(FVector NewLocation)
