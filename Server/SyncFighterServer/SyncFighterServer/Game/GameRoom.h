@@ -20,6 +20,8 @@ public:
 	void Broadcast(void* packet, int32_t size, Session* exceptMe = nullptr); // 뿌리기
 
 	void Respawn(int32_t sessionId);
+
+	int32_t GetWinnerID();
 private:
 	std::vector<Session*> _sessions;
 	std::mutex _lock; // 이 방 전용 자물쇠
@@ -30,6 +32,10 @@ private:
 
 	// 랜덤하게 하나 뽑아오는 함수
 	SpawnPoint GetRandomSpawnPoint();
+
+	std::atomic<bool> _isGameRunning{ false };
+	int32_t _remainingTime = 0;
+	std::thread _timerThread;
 };
 
 // (임시) 전역으로 방 하나만 둠

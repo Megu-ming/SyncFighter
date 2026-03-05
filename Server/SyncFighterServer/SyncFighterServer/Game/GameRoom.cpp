@@ -7,6 +7,49 @@ GameRoom::GameRoom()
 {
     _spawnPoints.push_back({ 900.0f, 1000.0f, 100.0f, 0.0f }); // 1번 자리
     _spawnPoints.push_back({ 2100.0f, 1000.0f, 100.0f, 180.0f }); // 2번 자리
+
+    // 타이머 스레드 생성
+    _timerThread = std::thread([this]() {
+        while (true)
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            if (_isGameRunning)
+            {
+                std::lock_guard<std::mutex> lock(_lock);
+                _remainingTime--;
+
+                PacketTimerSync syncPkt;
+                syncPkt.Size = sizeof(PacketTimerSync);
+                syncPkt.Id = S_TO_C_TIMER_SYNC;
+                syncPkt.RemainingTime = _remainingTime;
+
+                for (Session* s : _sessions)
+                {
+                    s->Send(&syncPkt, sizeof(syncPkt));
+                }
+
+                // 3분이 다 지났다면?
+                if (_remainingTime <= 0)
+                {
+                    _isGameRunning = false;
+
+                    PacketGameOver pkt;
+                    pkt.Size = sizeof(PacketGameOver);
+                    pkt.Id = S_TO_C_GAME_OVER;
+                    pkt.WinnerPlayerID = GetWinnerID();
+
+                    // 방 안의 모든 유저에게 게임 종료 패킷 발송
+                    for (Session* s : _sessions)
+                    {
+                        s->Send(&pkt, sizeof(pkt));
+                    }
+                    std::cout << "Game Over! Winner ID: " << pkt.WinnerPlayerID << std::endl;
+                }
+            }
+        }
+    });
+    _timerThread.detach();
 }
 
 Session* GameRoom::FindSession(int32_t id)
@@ -22,7 +65,19 @@ Session* GameRoom::FindSession(int32_t id)
 void GameRoom::Enter(Session* session)
 {
 	std::lock_guard<std::mutex> lock(_lock);
-	_sessions.push_back(session);
+	
+    bool bIsNew = true;
+    for (Session* s : _sessions) {
+        if (s == session) { bIsNew = false; break; }
+    }
+    if (bIsNew) {
+        _sessions.push_back(session);
+    }
+
+    session->_hp = 500;
+    session->_isDead = false;
+    session->_kills = 0;
+    session->_deaths = 0;
 
     SpawnPoint spawn = GetRandomSpawnPoint();
     session->_x = spawn.x;
@@ -41,6 +96,13 @@ void GameRoom::Enter(Session* session)
     session->Send(&loginPacket, sizeof(loginPacket));
 
 	std::cout << "User " << session->_id << " Entered Room. Total: " << _sessions.size() << std::endl;
+
+    if (_sessions.size() == 2 && !_isGameRunning)
+    {
+        _remainingTime = 180; // 3분
+        _isGameRunning = true;
+        std::cout << "=== 3분 데스매치 시작! ===" << std::endl;
+    }
 }
 
 void GameRoom::Leave(Session* session)
@@ -116,6 +178,27 @@ void GameRoom::Respawn(int32_t sessionId)
     }
 
     std::cout << "User " << targetSession->_id << " Respawned!" << std::endl;
+}
+
+int32_t GameRoom::GetWinnerID()
+{
+    if (_sessions.empty()) return -1;
+    Session* winner = _sessions[0];
+    for (size_t i = 1; i < _sessions.size(); ++i)
+    {
+        if (_sessions[i]->_kills > winner->_kills)
+        {
+            winner = _sessions[i];
+        }
+    }
+
+    // 무승부 처리
+    if (_sessions.size() == 2 && _sessions[0]->_kills == _sessions[1]->_kills)
+    {
+        return -1;
+    }
+
+    return winner->_id;
 }
 
 SpawnPoint GameRoom::GetRandomSpawnPoint()

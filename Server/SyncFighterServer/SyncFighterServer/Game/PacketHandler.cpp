@@ -71,8 +71,6 @@ void PacketHandler::HandleLoginReq(Session* session, PacketLoginReq* packet)
             std::cout << "Login Success: [" << requestID << "]" << std::endl;
 
             session->Send(&resPacket, sizeof(resPacket));
-            
-            // GGameRoom.Enter(session); 이제 입장은 EnterGameReq 쪽에서
 
             return;
         }
@@ -84,7 +82,7 @@ void PacketHandler::HandleLoginReq(Session* session, PacketLoginReq* packet)
     }
     else
     {
-        // 3. 아이디가 존재하지 않음 (유저 기획 포인트!)
+        // 3. 아이디가 존재하지 않음
         resPacket.ResultCode = FAIL_NOT_FOUND;
         std::cout << "Login Fail (Not Found): [" << requestID << "]" << std::endl;
     }
@@ -133,7 +131,7 @@ void PacketHandler::HandleEnterGameReq(Session* session, PacketEnterGameReq* pac
 
     std::cout << "[User " << session->_id << "] Enter Game! Class: " << session->_classType << std::endl;
 
-    // 2. 직업까지 골랐으니 이제 진짜로 게임 룸에 입장시킵니다!
+    // 직업 선택 했으니 게임룸 입장
     GGameRoom.Enter(session);
 }
 
@@ -188,6 +186,9 @@ void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
             VictimSession->_hp = 0;
             VictimSession->_isDead = true;
 
+            VictimSession->_deaths++;
+            session->_kills++;
+
             int32_t victimId = VictimSession->_id;
 
             std::thread([victimId]() {
@@ -201,10 +202,10 @@ void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
         ResPkt.Size = sizeof(PacketDamage);
         ResPkt.Id = S_TO_C_DAMAGE;
 
-        ResPkt.AttackerID = session->_id;       // 때린 사람
+        ResPkt.AttackerID = session->_id;       // 때린 사람ㅍㅍ
         ResPkt.VictimID = packet->VictimID;     // 맞은 사람
         ResPkt.DamageAmount = packet->Damage;   // 들어간 데미지
-        ResPkt.RemainingHP = VictimSession->_hp; // ★ 진짜 남은 체력!
+        ResPkt.RemainingHP = VictimSession->_hp; // 진짜 남은 체력!
 
         std::cout << "[Hit] 유저 " << session->_id << " -> 유저 " << packet->VictimID
             << " 타격! (데미지: " << packet->Damage
