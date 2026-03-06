@@ -16,7 +16,13 @@ void USFLobbyWidget::NativeConstruct()
 	if (StartGameBtn) StartGameBtn->OnClicked.AddDynamic(this, &USFLobbyWidget::OnStartGameClicked);
 
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-	if (GI) GI->OnLoginResult.AddDynamic(this, &USFLobbyWidget::OnLoginResultReceived);
+	if (GI)
+	{
+		GI->OnLoginResult.AddDynamic(this, &USFLobbyWidget::OnLoginResultReceived);
+		GI->OnMatchSuccess.AddDynamic(this, &USFLobbyWidget::OnMatchSuccessReceived);
+	}
+
+	if (CancelMatchBtn) CancelMatchBtn->OnClicked.AddDynamic(this, &USFLobbyWidget::OnCancelMatchClicked);
 
 	if (MainSwitcher) MainSwitcher->SetActiveWidgetIndex(0);
 
@@ -40,6 +46,19 @@ void USFLobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI) GI->CheckLoginPackets();
+}
+
+void USFLobbyWidget::OnCancelMatchClicked()
+{
+	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+	if (GI)
+	{
+		// 1. 서버에 취소 패킷 발송
+		GI->RequestCancelMatchmaking();
+
+		// 2. 화면을 다시 캐릭터 선택 창(Index 1)으로 돌려놓기
+		if (MainSwitcher) MainSwitcher->SetActiveWidgetIndex(1);
+	}
 }
 
 void USFLobbyWidget::OnLoginClicked()
@@ -68,8 +87,8 @@ void USFLobbyWidget::OnStartGameClicked()
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI)
 	{
-		GI->MyClassType = SelectedClassType;
-		UGameplayStatics::OpenLevel(GetWorld(), FName("ThirdPersonMap"));
+		GI->RequestMatchmaking(SelectedClassType);
+		if (MainSwitcher) MainSwitcher->SetActiveWidgetIndex(2);
 	}
 }
 
@@ -113,4 +132,9 @@ void USFLobbyWidget::UpdateCharacterVisibility()
 		if (RefWarrior) RefWarrior->SetActorHiddenInGame(true);  // 숨기기
 		if (RefMage) RefMage->SetActorHiddenInGame(false);       // 보이기
 	}
+}
+
+void USFLobbyWidget::OnMatchSuccessReceived()
+{
+	UGameplayStatics::OpenLevel(GetWorld(), FName("ThirdPersonMap"));
 }

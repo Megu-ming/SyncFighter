@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <string>
 #include <cstring>
+#include <vector>
+std::vector<Session*> MatchQueue;
 
 std::unordered_map<std::string, std::string> AccountDB = {
 	{"test", "1234"},
@@ -24,6 +26,12 @@ void PacketHandler::HandlePacket(Session* session, char* buffer, int32_t len)
 	case C_TO_S_REGISTER_REQ: // 가입 요청이 오면
 		HandleRegisterReq(session, (PacketRegisterReq*)buffer);
 		break;
+    case C_TO_S_MATCH_REQ:
+        HandleMatchReq(session, (PacketMatchReq*)buffer);
+        break;
+    case C_TO_S_MATCH_CANCEL_REQ:
+        HandleMatchCancelReq(session, (PacketMatchCancelReq*)buffer);
+        break;
     case C_TO_S_ENTER_GAME_REQ:
         HandleEnterGameReq(session, (PacketEnterGameReq*)buffer);
         break;
@@ -123,6 +131,48 @@ void PacketHandler::HandleRegisterReq(Session* session, PacketRegisterReq* packe
     }
 
     session->Send(&resPacket, sizeof(resPacket));
+}
+
+void PacketHandler::HandleMatchReq(Session* session, PacketMatchReq* packet)
+{
+    session->_classType = packet->ClassType;
+
+    // 1. 대기열에 유저 추가
+    MatchQueue.push_back(session);
+    std::cout << "[Matchmaker] User " << session->_id << " 이 매칭 큐에 등록되었습니다. (현재 대기자: " << MatchQueue.size() << "명)" << std::endl;
+
+    // 2. 2명이 모였는지 확인!
+    if (MatchQueue.size() >= 2)
+    {
+        Session* player1 = MatchQueue[0];
+        Session* player2 = MatchQueue[1];
+
+        // 큐에서 두 명 제거
+        MatchQueue.erase(MatchQueue.begin(), MatchQueue.begin() + 2);
+
+        std::cout << "[Matchmaker] 매칭 성사! User " << player1->_id << " & User " << player2->_id << std::endl;
+
+        // 3. 두 명 모두에게 "매칭 성공! 맵 넘어가라!" 패킷 전송
+        PacketMatchSuccess successPkt;
+        successPkt.Size = sizeof(PacketMatchSuccess);
+        successPkt.Id = S_TO_C_MATCH_SUCCESS;
+
+        player1->Send(&successPkt, sizeof(successPkt));
+        player2->Send(&successPkt, sizeof(successPkt));
+    }
+}
+
+void PacketHandler::HandleMatchCancelReq(Session* session, PacketMatchCancelReq* packet)
+{
+    for (auto it = MatchQueue.begin(); it != MatchQueue.end(); ++it)
+    {
+        if (*it == session)
+        {
+            MatchQueue.erase(it);
+            std::cout << "[Matchmaker] User " << session->_id << " 매칭 취소. (남은 대기자: " << MatchQueue.size() << "명)" << std::endl;
+            break;
+        }
+    }
 }
 
 void PacketHandler::HandleEnterGameReq(Session* session, PacketEnterGameReq* packet)

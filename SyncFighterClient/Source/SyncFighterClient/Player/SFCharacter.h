@@ -102,7 +102,10 @@ public:
 	UAnimMontage* DeathMontage;
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
-	UAnimMontage* HitMontage; // (나중에 쓸 것)
+	UAnimMontage* HitMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TSubclassOf<class UUserWidget> DamageTextWidgetClass;
 
 	// 3. UI 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "UI")

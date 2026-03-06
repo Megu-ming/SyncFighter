@@ -52,6 +52,12 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UButton* StartGameBtn; // 게임 시작 버튼
 
+	UPROPERTY(meta = (BindWidget))
+	UButton* CancelMatchBtn; // 매칭 취소 버튼
+
+	UFUNCTION()
+	void OnCancelMatchClicked();
+
 	// --- 상태 변수 ---
 	UPROPERTY(meta = (BindWidget))
 	USFPopupWidget* PopupWidget;
@@ -86,6 +92,9 @@ public:
 	void OnLoginResultReceived(int32 ResultCode);
 
 	void UpdateCharacterVisibility();
+
+	UFUNCTION()
+	void OnMatchSuccessReceived();
 
 	UPROPERTY(BlueprintAssignable, Category = "Lobby Event")
 	FOnCharacterChangedDelegate OnCharacterChangedEvent;

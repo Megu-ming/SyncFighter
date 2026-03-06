@@ -15,10 +15,13 @@ enum PacketID : int32_t // int32로 통일
 	S_TO_C_GAME_OVER = 7,
 	S_TO_C_TIMER_SYNC = 8,
 
-	C_TO_S_LOGIN_REQ = 10,    // C -> S 해당 아이디로 로그인 요청
-	S_TO_C_LOGIN_RES = 11,    // S -> C 로그인 결과
-	C_TO_S_REGISTER_REQ = 12, // C -> S 새로운 계정 생성
+	C_TO_S_LOGIN_REQ = 10,		// C -> S 해당 아이디로 로그인 요청
+	S_TO_C_LOGIN_RES = 11,		// S -> C 로그인 결과
+	C_TO_S_REGISTER_REQ = 12,	// C -> S 새로운 계정 생성
 	C_TO_S_ENTER_GAME_REQ = 13, // C -> S 직업 선택 후 게임 입장 요청
+	C_TO_S_MATCH_REQ = 14,      // C -> S: "저 매칭 돌려주세요!"
+	S_TO_C_MATCH_SUCCESS = 15,  // S -> C: "상대방 찾았음! 게임 맵으로 넘어가세요!"
+	C_TO_S_MATCH_CANCEL_REQ = 16,
 
 	C_TO_S_CHAT = 20,		// C -> S 채팅 패킷
 	S_TO_C_CHAT = 21,		// S -> C 채팅 패킷
@@ -88,6 +91,22 @@ struct PacketGameOver : public PacketHeader
 struct PacketTimerSync : public PacketHeader
 {
 	int32_t RemainingTime; // 서버가 알려주는 정확한 남은 시간
+};
+
+struct PacketMatchReq : public PacketHeader
+{
+	int32_t ClassType; // 선택한 직업 번호를 들고 매칭 큐에 진입
+};
+
+struct PacketMatchSuccess : public PacketHeader
+{
+	// 지금은 단순히 "성공했다"는 신호만 주면 되므로 추가 데이터는 생략합니다.
+	// (나중에 방이 여러 개가 되면 여기에 RoomID를 담아줄 수 있습니다)
+};
+
+struct PacketMatchCancelReq : public PacketHeader
+{
+	// 서버가 보낸 사람의 세션(Session)을 알 수 있으므로, 헤더만 있으면 충분합니다!
 };
 #pragma endregion
 

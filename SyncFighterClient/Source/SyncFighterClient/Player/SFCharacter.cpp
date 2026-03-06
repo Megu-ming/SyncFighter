@@ -257,6 +257,8 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 			HPWidget->UpdateHP((float)RemainingHP, 300.0f);
 		}
 	}
+
+	if (HitMontage) PlayAnimMontage(HitMontage);
 }
 
 void ASFCharacter::ProcessDeath()

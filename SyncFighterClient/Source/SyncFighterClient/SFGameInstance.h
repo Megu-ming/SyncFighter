@@ -10,6 +10,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLoginResultDelegate, int32, ResultCode);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnChatReceivedDelegate, int32, SenderID, FString, Message);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchSuccessDelegate);
 
 UCLASS()
 class SYNCFIGHTERCLIENT_API USFGameInstance : public UGameInstance
@@ -63,6 +64,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Network|Skill")
 	void SendSkillPacket(int32 SkillIndex, FVector TargetLoc);
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Network|Match")
+	void RequestMatchmaking(int32 ClassType);
+
+	UFUNCTION(BlueprintCallable, Category = "Network|Match")
+	void RequestCancelMatchmaking();
+
+	UPROPERTY(BlueprintAssignable, Category = "Network|Match")
+	FOnMatchSuccessDelegate OnMatchSuccess;
 
 public:
 	FSocket* Socket;

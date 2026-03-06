@@ -135,6 +135,11 @@ void USFGameInstance::CheckLoginPackets()
 				// UI(블루프린트) 쪽으로 이벤트 쫙 쏴주기!
 				OnLoginResult.Broadcast((int32)ResPkt->ResultCode);
 			}
+			else if (Header->Id == S_TO_C_MATCH_SUCCESS)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("매칭 성공! 인게임 맵으로 이동합니다."));
+				OnMatchSuccess.Broadcast(); // 로비 위젯에게 알려줌
+			}
 
 			ProcessedBytes += Header->Size;
 		}
@@ -182,4 +187,27 @@ void USFGameInstance::SendSkillPacket(int32 SkillIndex, FVector TargetLoc)
 
 	SendPacket(&Pkt, sizeof(Pkt));
 	UE_LOG(LogTemp, Log, TEXT("스킬 패킷 전송! (Index: %d)"), SkillIndex);
+}
+
+void USFGameInstance::RequestMatchmaking(int32 ClassType)
+{
+	MyClassType = ClassType; // 금고에 직업 저장
+
+	PacketMatchReq Pkt;
+	Pkt.Size = sizeof(PacketMatchReq);
+	Pkt.Id = C_TO_S_MATCH_REQ;
+	Pkt.ClassType = ClassType;
+
+	SendPacket(&Pkt, sizeof(Pkt));
+	UE_LOG(LogTemp, Warning, TEXT("서버에 매칭 요청을 보냈습니다. 대기 중..."));
+}
+
+void USFGameInstance::RequestCancelMatchmaking()
+{
+	PacketMatchCancelReq Pkt;
+	Pkt.Size = sizeof(PacketMatchCancelReq);
+	Pkt.Id = C_TO_S_MATCH_CANCEL_REQ;
+
+	SendPacket(&Pkt, sizeof(Pkt));
+	UE_LOG(LogTemp, Warning, TEXT("매칭을 취소했습니다."));
 }
