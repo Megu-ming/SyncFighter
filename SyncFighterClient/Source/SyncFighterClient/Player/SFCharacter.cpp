@@ -12,6 +12,7 @@
 #include "SyncFighterClient/SFGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "SyncFighterClient/UI/SFDamageTextActor.h"
 
 ASFCharacter::ASFCharacter()
 {
@@ -246,7 +247,7 @@ void ASFCharacter::ProcessSkillE()
 {
 }
 
-void ASFCharacter::ProcessDamage(int32 RemainingHP)
+void ASFCharacter::ProcessDamage(int32 DamageAmount, int32 RemainingHP)
 {
 	// 1. UI 업데이트
 	if (HPBarComponent)
@@ -259,6 +260,18 @@ void ASFCharacter::ProcessDamage(int32 RemainingHP)
 	}
 
 	if (HitMontage) PlayAnimMontage(HitMontage);
+	if (DamageTextActorClass)
+	{
+		FVector SpawnLocation = GetActorLocation() + FVector(0.0f, 0.0f, 100.0f);
+		SpawnLocation.X += FMath::RandRange(-30.0f, 30.0f);
+		SpawnLocation.Y += FMath::RandRange(-30.0f, 30.0f);
+
+		ASFDamageTextActor* DamageActor = GetWorld()->SpawnActor<ASFDamageTextActor>(DamageTextActorClass, SpawnLocation, FRotator::ZeroRotator);
+		if (DamageActor)
+		{
+			DamageActor->InitializeDamage(DamageAmount);
+		}
+	}
 }
 
 void ASFCharacter::ProcessDeath()

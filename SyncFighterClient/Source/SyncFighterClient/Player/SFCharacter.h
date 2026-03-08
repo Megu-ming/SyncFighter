@@ -90,7 +90,7 @@ public:
 	virtual void ProcessSkillQ();
 	virtual void ProcessSkillE();
 
-	virtual void ProcessDamage(int32 RemainingHP); // 피격/사망 처리
+	virtual void ProcessDamage(int32 DamageAmount, int32 RemainingHP); // 피격/사망 처리
 	virtual void ProcessDeath();
 	virtual void ProcessRespawn(FVector NewLocation); // 부활 처리
 
@@ -105,7 +105,7 @@ public:
 	UAnimMontage* HitMontage;
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
-	TSubclassOf<class UUserWidget> DamageTextWidgetClass;
+	TSubclassOf<class ASFDamageTextActor> DamageTextActorClass;
 
 	// 3. UI 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "UI")

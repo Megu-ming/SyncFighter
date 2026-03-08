@@ -252,7 +252,7 @@ void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
         ResPkt.Size = sizeof(PacketDamage);
         ResPkt.Id = S_TO_C_DAMAGE;
 
-        ResPkt.AttackerID = session->_id;       // 때린 사람ㅍㅍ
+        ResPkt.AttackerID = session->_id;       // 때린 사람
         ResPkt.VictimID = packet->VictimID;     // 맞은 사람
         ResPkt.DamageAmount = packet->Damage;   // 들어간 데미지
         ResPkt.RemainingHP = VictimSession->_hp; // 진짜 남은 체력!

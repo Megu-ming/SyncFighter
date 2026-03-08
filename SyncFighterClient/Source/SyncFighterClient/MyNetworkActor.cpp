@@ -342,7 +342,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 
 				if (VictimChar)
 				{
-					VictimChar->ProcessDamage(DmgPkt->RemainingHP);
+					VictimChar->ProcessDamage(DmgPkt->DamageAmount, DmgPkt->RemainingHP);
 					if (AttackerPS) AttackerPS->AddDamage(DmgPkt->DamageAmount);
 
 					if (DmgPkt->RemainingHP <= 0)
