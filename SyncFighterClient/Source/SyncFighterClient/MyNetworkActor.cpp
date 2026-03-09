@@ -40,6 +40,7 @@ void AMyNetworkActor::BeginPlay()
 			// 1. 소환!
 			ASFCharacter* MyChar = GetWorld()->SpawnActor<ASFCharacter>(MySpawnClass, SpawnLoc, SpawnRot);
 			MyChar->PlayerID = GI->MyPlayerID;
+			MyChar->InitStatus(GI->MyClassType);
 
 			// 2. 빙의! (키보드/마우스 컨트롤 연결)
 			APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
@@ -65,7 +66,7 @@ void AMyNetworkActor::BeginPlay()
 		if (HUDWidget)
 		{
 			HUDWidget->AddToViewport();
-			HUDWidget->UpdateTimer(RemainingMatchTime);
+			HUDWidget->UpdateTimer(180);
 			HUDWidget->UpdateMyScore(0, 0);
 			HUDWidget->UpdateEnemyScore(0, 0);
 		}
@@ -153,16 +154,12 @@ void AMyNetworkActor::Tick(float DeltaTime)
 					PC->bShowMouseCursor = true;
 				}
 
-				// 2. 타이머 멈춤 & HUD 숨기기
-				GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-				if (HUDWidget) HUDWidget->SetVisibility(ESlateVisibility::Hidden);
-
-				// 3. 내 PlayerState에서 최종 점수 가져오기
+				// 2. 내 PlayerState에서 최종 점수 가져오기
 				ASFPlayerState* MyPS = Cast<ASFPlayerState>(PC->PlayerState);
 				int32 FinalKills = MyPS ? MyPS->Kills : 0;
 				int32 FinalDeaths = MyPS ? MyPS->Deaths : 0;
 
-				// 4. 결과창 띄우기
+				// 3. 결과창 띄우기
 				bool bIsWinner = (OverPkt->WinnerPlayerID == GI->MyPlayerID); // 내가 승리자인지 판별
 
 				if (ResultWidgetClass)
@@ -225,6 +222,7 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						if (NewChar && NewPS)
 						{
 							NewPS->SFPlayerID = Packet->PlayerID;
+							NewChar->InitStatus(Packet->ClassType);
 
 							FRemotePlayerInfo NewInfo;
 							NewInfo.Character = NewChar;
@@ -437,22 +435,5 @@ void AMyNetworkActor::Tick(float DeltaTime)
 			// 2. 캐릭터 스스로 동기화하도록 명령
 			Info.Character->SyncTransform(DeltaTime);
 		}
-	}
-}
-
-void AMyNetworkActor::OnMatchTimerTick()
-{
-	RemainingMatchTime--;
-
-	if (HUDWidget)
-	{
-		HUDWidget->UpdateTimer(RemainingMatchTime);
-	}
-
-	if (RemainingMatchTime <= 0)
-	{
-		// 나중에 여기에 "게임 오버!" 처리와 결과창 띄우는 로직이 들어갑니다.
-		GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-		UE_LOG(LogTemp, Warning, TEXT("게임 종료!!"));
 	}
 }

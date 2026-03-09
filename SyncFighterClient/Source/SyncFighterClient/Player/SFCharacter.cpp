@@ -96,6 +96,26 @@ void ASFCharacter::Tick(float DeltaTime)
 	}
 }
 
+void ASFCharacter::InitStatus(int32 InClassType)
+{
+	if (InClassType == 0) // 전사 (WARRIOR)
+	{
+		MaxHP = 500;
+	}
+	else // 마법사 (MAGE)
+	{
+		MaxHP = 300;
+	}
+
+	CurrentHP = MaxHP; // 스폰 시 체력 만땅
+
+	if (HPBarComponent)
+	{
+		USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(HPBarComponent->GetUserWidgetObject());
+		if (HPWidget) HPWidget->UpdateHP((float)CurrentHP, (float)MaxHP);
+	}
+}
+
 void ASFCharacter::Move(const FInputActionValue& Value)
 {
 	if (CurrentState != ECharacterState::Idle 
@@ -249,13 +269,15 @@ void ASFCharacter::ProcessSkillE()
 
 void ASFCharacter::ProcessDamage(int32 DamageAmount, int32 RemainingHP)
 {
+	CurrentHP = RemainingHP;
+
 	// 1. UI 업데이트
 	if (HPBarComponent)
 	{
 		USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(HPBarComponent->GetUserWidgetObject());
 		if (HPWidget)
 		{
-			HPWidget->UpdateHP((float)RemainingHP, 300.0f);
+			HPWidget->UpdateHP((float)CurrentHP, (float)MaxHP);
 		}
 	}
 
@@ -290,12 +312,13 @@ void ASFCharacter::ProcessRespawn(FVector NewLocation)
 {
 	CurrentState = ECharacterState::Idle;
 	SetActorLocation(NewLocation);
+	CurrentHP = MaxHP;
 
 	// UI 복구
 	if (HPBarComponent)
 	{
 		USFHPBarWidget* HPWidget = Cast<USFHPBarWidget>(HPBarComponent->GetUserWidgetObject());
-		if (HPWidget) HPWidget->UpdateHP(100.0f, 100.0f);
+		if (HPWidget) HPWidget->UpdateHP((float)CurrentHP, (float)MaxHP);
 	}
 
 	// 상태 복구

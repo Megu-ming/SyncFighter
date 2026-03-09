@@ -53,6 +53,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HitPoint")
 	USceneComponent* HitPoint;
 
+public:
+	// --- 서버 동기화용 스탯 변수 ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	int32 MaxHP = 300;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
+	int32 CurrentHP = 300;
+
+	// 직업 번호를 받아 스탯을 초기화하는 함수
+	void InitStatus(int32 InClassType);
+
 #pragma region InputAction
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))

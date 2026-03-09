@@ -50,13 +50,6 @@ public:
 	UPROPERTY()
 	USFHUDWidget* HUDWidget;
 
-	// --- 데스매치 타이머 관련 ---
-	FTimerHandle MatchTimerHandle;
-	int32 RemainingMatchTime = 180; // 3분
-
-	UFUNCTION()
-	void OnMatchTimerTick();
-
 public:
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<USFResultWidget> ResultWidgetClass;
