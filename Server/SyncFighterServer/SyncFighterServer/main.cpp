@@ -32,12 +32,12 @@ void WorkerThread()
         OVERLAPPED_EX* exOverlapped = (OVERLAPPED_EX*)overlapped;
         Session* session = (Session*)exOverlapped->owner;
 
-        // 2. 에러 처리 및 종료 확인 (수정된 부분 ★)
+        // 2. 에러 처리 및 종료 확인
         if (result == FALSE || bytesTransferred == 0)
         {
             std::cout << "Client Disconnected: ID " << session->_id << std::endl;
 
-            // ★ 방에서 내보내기 (이걸 안 해서 좀비가 됨)
+            // 방에서 내보내기
             GGameRoom.Leave(session);
 
             // 소켓 닫기 및 메모리 해제

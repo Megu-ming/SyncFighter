@@ -5,6 +5,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include "Player.h"
 std::vector<Session*> MatchQueue;
 
 std::unordered_map<std::string, std::string> AccountDB = {
@@ -135,7 +136,7 @@ void PacketHandler::HandleRegisterReq(Session* session, PacketRegisterReq* packe
 
 void PacketHandler::HandleMatchReq(Session* session, PacketMatchReq* packet)
 {
-    session->_classType = packet->ClassType;
+    session->_player = new Player(session, packet->ClassType);
 
     // 1. 대기열에 유저 추가
     MatchQueue.push_back(session);
@@ -177,9 +178,10 @@ void PacketHandler::HandleMatchCancelReq(Session* session, PacketMatchCancelReq*
 
 void PacketHandler::HandleEnterGameReq(Session* session, PacketEnterGameReq* packet)
 {
-    session->_classType = packet->ClassType;
+    Player* player = session->_player;
+    player->_classType = packet->ClassType;
 
-    std::cout << "[User " << session->_id << "] Enter Game! Class: " << session->_classType << std::endl;
+    std::cout << "[User " << session->_id << "] Enter Game! Class: " << player->_classType << std::endl;
 
     // 직업 선택 했으니 게임룸 입장
     GGameRoom.Enter(session);
@@ -187,14 +189,15 @@ void PacketHandler::HandleEnterGameReq(Session* session, PacketEnterGameReq* pac
 
 void PacketHandler::HandlePlayerMove(Session* session, PacketPlayerMove* packet)
 {
-	session->_x = packet->X;
-	session->_y = packet->Y;
-	session->_z = packet->Z;
-	session->_yaw = packet->Yaw;
+    Player* player = session->_player;
+	player->_x = packet->X;
+	player->_y = packet->Y;
+	player->_z = packet->Z;
+	player->_yaw = packet->Yaw;
 
 	// 패킷 검증 및 수정
 	packet->PlayerID = session->_id;
-    packet->ClassType = session->_classType;
+    packet->ClassType = player->_classType;
 
 	// 방에 있는 사람들에게 전송
 	GGameRoom.Broadcast(packet, packet->Size, session);
@@ -227,17 +230,20 @@ void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
     if (VictimSession != nullptr) 
     {
         if (VictimSession == session) return;
-        if (VictimSession->_isDead) return;
+        if (VictimSession->_player->_isDead) return;
+        Player* attackerPlayer = session->_player;
+        Player* victimPlayer = VictimSession->_player;
 
+        int32_t actualDamage = attackerPlayer->CalculateDamage(1.0f);
         // 2. 체력 차감
-        VictimSession->_hp -= packet->Damage;
-        if (VictimSession->_hp <= 0)
+        victimPlayer->_hp -= actualDamage;
+        if (victimPlayer->_hp <= 0)
         {
-            VictimSession->_hp = 0;
-            VictimSession->_isDead = true;
+            victimPlayer->_hp = 0;
+            victimPlayer->_isDead = true;
 
-            VictimSession->_deaths++;
-            session->_kills++;
+            victimPlayer->_deaths++;
+            attackerPlayer->_kills++;
 
             int32_t victimId = VictimSession->_id;
 
@@ -254,12 +260,12 @@ void PacketHandler::HandleHitReq(Session* session, PacketHitReq* packet)
 
         ResPkt.AttackerID = session->_id;       // 때린 사람
         ResPkt.VictimID = packet->VictimID;     // 맞은 사람
-        ResPkt.DamageAmount = packet->Damage;   // 들어간 데미지
-        ResPkt.RemainingHP = VictimSession->_hp; // 진짜 남은 체력!
+        ResPkt.DamageAmount = actualDamage;   // 들어간 데미지
+        ResPkt.RemainingHP = victimPlayer->_hp; // 진짜 남은 체력!
 
         std::cout << "[Hit] 유저 " << session->_id << " -> 유저 " << packet->VictimID
-            << " 타격! (데미지: " << packet->Damage
-            << " / 남은 체력: " << VictimSession->_hp << ")" << std::endl;
+            << " 타격! (데미지: " << actualDamage
+            << " / 남은 체력: " << victimPlayer->_hp << ")" << std::endl;
 
         // 4. 방에 있는 모두에게 데미지 결과 브로드캐스팅
         GGameRoom.Broadcast(&ResPkt, ResPkt.Size);

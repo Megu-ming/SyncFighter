@@ -130,11 +130,13 @@
   <ItemGroup>
     <ClCompile Include="Game\GameRoom.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Network\Player.cpp" />
     <ClCompile Include="Network\Session.cpp" />
     <ClCompile Include="Game\PacketHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\GameRoom.h" />
+    <ClInclude Include="Network\Player.h" />
     <ClInclude Include="Network\Session.h" />
     <ClInclude Include="Game\PacketHandler.h" />
     <ClInclude Include="Protocol.h" />

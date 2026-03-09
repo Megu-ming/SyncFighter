@@ -3,6 +3,8 @@
 #include <iostream>
 #include "Protocol.h"
 
+class Player;
+
 // 비동기 작업 식별용
 enum class IO_TYPE { READ, WRITE, ACCEPT };
 
@@ -31,14 +33,5 @@ public:
 
 public:
 	// 게임 데이터 추가
-	// (원래는 Player 클래스를 따로 만드는 게 정석이지만, 일단 여기에 둡니다)
-	int32_t _classType;
-
-	float _x = 0, _y = 0, _z = 0, _yaw = 0; // 위치 기억
-	int32_t _hp = 300;                      // 체력
-	bool _isDead = false;                   // 사망 여부
-
-	// 킬데스 기록
-	int32_t _kills = 0;
-	int32_t _deaths = 0;
+	Player* _player;
 };

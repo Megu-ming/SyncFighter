@@ -23,11 +23,15 @@
     <ClCompile Include="Game\PacketHandler.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="Network\Player.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="Network\Session.h" />
     <ClInclude Include="Game\GameRoom.h" />
     <ClInclude Include="Game\PacketHandler.h" />
+    <ClInclude Include="Network\Player.h" />
   </ItemGroup>
 </Project>

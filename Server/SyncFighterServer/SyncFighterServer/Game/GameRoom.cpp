@@ -1,4 +1,5 @@
 #include "GameRoom.h"
+#include "Network/Player.h"
 
 // 전역 객체 실체화 (Linker Error 방지)
 GameRoom GGameRoom;
@@ -74,24 +75,25 @@ void GameRoom::Enter(Session* session)
         _sessions.push_back(session);
     }
 
-    session->_hp = 500;
-    session->_isDead = false;
-    session->_kills = 0;
-    session->_deaths = 0;
+    Player* player = session->_player;
+    player->_hp = player->_maxHp;
+    player->_isDead = false;
+    player->_kills = 0;
+    player->_deaths = 0;
 
     SpawnPoint spawn = GetRandomSpawnPoint();
-    session->_x = spawn.x;
-    session->_y = spawn.y;
-    session->_z = spawn.z;
-    session->_yaw = spawn.yaw;
+    player->_x = spawn.x;
+    player->_y = spawn.y;
+    player->_z = spawn.z;
+    player->_yaw = spawn.yaw;
 
     PacketLogin loginPacket;
     loginPacket.Size = sizeof(PacketLogin);
     loginPacket.Id = S_TO_C_LOGIN; // 0번
     loginPacket.MyPlayerID = session->_id;
-    loginPacket.SpawnX = session->_x;
-    loginPacket.SpawnY = session->_y;
-    loginPacket.SpawnZ = session->_z;
+    loginPacket.SpawnX = player->_x;
+    loginPacket.SpawnY = player->_y;
+    loginPacket.SpawnZ = player->_z;
 
     session->Send(&loginPacket, sizeof(loginPacket));
 
@@ -154,22 +156,23 @@ void GameRoom::Respawn(int32_t sessionId)
         return;
     }
 
-    targetSession->_hp = 100;
-    targetSession->_isDead = false;
+    Player* targetPlayer = targetSession->_player;
+    targetPlayer->_hp = targetPlayer->_maxHp;
+    targetPlayer->_isDead = false;
 
     SpawnPoint spawn = GetRandomSpawnPoint();
-    targetSession->_x = spawn.x;
-    targetSession->_y = spawn.y;
-    targetSession->_z = spawn.z;
+    targetPlayer->_x = spawn.x;
+    targetPlayer->_y = spawn.y;
+    targetPlayer->_z = spawn.z;
 
     // 부활 패킷 전송
     PacketRespawn respawnPkt;
     respawnPkt.Size = sizeof(PacketRespawn);
     respawnPkt.Id = S_TO_C_RESPAWN; // 4번
     respawnPkt.PlayerID = targetSession->_id;
-    respawnPkt.X = targetSession->_x;
-    respawnPkt.Y = targetSession->_y;
-    respawnPkt.Z = targetSession->_z;
+    respawnPkt.X = targetPlayer->_x;
+    respawnPkt.Y = targetPlayer->_y;
+    respawnPkt.Z = targetPlayer->_z;
 
     // 부활 패킷 브로드캐스트
     for (Session* s : _sessions)
@@ -186,14 +189,14 @@ int32_t GameRoom::GetWinnerID()
     Session* winner = _sessions[0];
     for (size_t i = 1; i < _sessions.size(); ++i)
     {
-        if (_sessions[i]->_kills > winner->_kills)
+        if (_sessions[i]->_player->_kills > winner->_player->_kills)
         {
             winner = _sessions[i];
         }
     }
 
     // 무승부 처리
-    if (_sessions.size() == 2 && _sessions[0]->_kills == _sessions[1]->_kills)
+    if (_sessions.size() == 2 && _sessions[0]->_player->_kills == _sessions[1]->_player->_kills)
     {
         return -1;
     }
