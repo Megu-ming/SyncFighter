@@ -57,7 +57,7 @@ void ASFMage::ProcessSkillQ()
 	}
 	else
 	{
-		bIsAimingQ = false; // 조준 끝!
+		bIsAimingQ = false;
 
 		if (CurrentIndicator)
 		{
@@ -79,13 +79,11 @@ void ASFMage::ProcessSkillQ()
 
 				if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLoc, EndLoc, ECC_Visibility, CollisionParams))
 				{
-					// ★ 1. 스폰은 하지 말고, 찾아낸 타겟 좌표를 변수에 예쁘게 저장만 해둡니다!
 					SkillQTargetLoc = HitResult.ImpactPoint;
 
 					USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 					if (GI) GI->SendSkillPacket(0, SkillQTargetLoc);
 
-					// 몽타주 재생 (이제 몽타주가 재생되다가 노티파이를 부를 겁니다)
 					if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.0f);
 				}
 			}
@@ -96,29 +94,39 @@ void ASFMage::ProcessSkillQ()
 
 void ASFMage::PlayRemoteSkillQ(FVector TargetLoc)
 {
-	SkillQTargetLoc = TargetLoc; // ★ 남의 Q스킬도 좌표만 기억!
+	SkillQTargetLoc = TargetLoc;
 	if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.0f);
 }
 
 void ASFMage::ProcessSkillE()
 {
-	CancelAiming();
-	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-
-	SkillETargetLoc = GetActorLocation();
-	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
-
-	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-	if (GI && IsLocallyControlled())
-	{
-		GI->SendSkillPacket(1, GetActorLocation());
-	}
+	
 }
 
 void ASFMage::PlayRemoteSkillE(FVector TargetLoc)
 {
-	SkillETargetLoc = TargetLoc;
-	if (SkillEMontage) PlayAnimMontage(SkillEMontage, 1.0f);
+	
+}
+
+void ASFMage::ProcessSkillR()
+{
+	CancelAiming();
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+
+	SkillRTargetLoc = GetActorLocation();
+	if (SkillRMontage) PlayAnimMontage(SkillRMontage, 1.0f);
+
+	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+	if (GI && IsLocallyControlled())
+	{
+		GI->SendSkillPacket(2, GetActorLocation());
+	}
+}
+
+void ASFMage::PlayRemoteSkillR(FVector TargetLoc)
+{
+	SkillRTargetLoc = TargetLoc;
+	if (SkillRMontage) PlayAnimMontage(SkillRMontage, 1.0f);
 
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 }
@@ -135,15 +143,15 @@ void ASFMage::SpawnSkillQMagic()
 	}
 }
 
-void ASFMage::SpawnSkillEMagic()
+void ASFMage::SpawnSkillRMagic()
 {
-	if (SkillEMagicClass)
+	if (SkillRMagicClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = this;
 		// 기억해둔 좌표(기데온 본체)에 스폰!
-		GetWorld()->SpawnActor<AActor>(SkillEMagicClass, SkillETargetLoc, FRotator::ZeroRotator, SpawnParams);
+		GetWorld()->SpawnActor<AActor>(SkillRMagicClass, SkillRTargetLoc, FRotator::ZeroRotator, SpawnParams);
 	}
 }
 

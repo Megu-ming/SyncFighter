@@ -180,6 +180,13 @@ void ASFCharacter::SkillE(const FInputActionValue& Value)
 	ProcessSkillE();
 }
 
+void ASFCharacter::SkillR(const FInputActionValue& Value)
+{
+	if (CurrentState != ECharacterState::Idle) return; // 기본 상태에서만 가능
+
+	ProcessSkillR();
+}
+
 void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -204,6 +211,7 @@ void ASFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASFCharacter::BasicAttack);
 		EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ASFCharacter::SkillQ);
 		EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ASFCharacter::SkillE);
+		EnhancedInputComponent->BindAction(SkillRAction, ETriggerEvent::Started, this, &ASFCharacter::SkillR);
 	}
 	else
 	{
@@ -264,6 +272,10 @@ void ASFCharacter::ProcessSkillQ()
 }
 
 void ASFCharacter::ProcessSkillE()
+{
+}
+
+void ASFCharacter::ProcessSkillR()
 {
 }
 

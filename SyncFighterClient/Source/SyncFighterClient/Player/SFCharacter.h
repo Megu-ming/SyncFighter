@@ -77,11 +77,12 @@ public:
 	UInputAction* JumpAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
-	// ★ 신규 추가: Q, E, 회피 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SkillQAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SkillEAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SkillRAction;
 
 #pragma endregion
 
@@ -92,6 +93,7 @@ protected:
 	void BasicAttack(const FInputActionValue& Value);
 	void SkillQ(const FInputActionValue& Value);
 	void SkillE(const FInputActionValue& Value);
+	void SkillR(const FInputActionValue& Value);
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -100,6 +102,7 @@ public:
 	virtual void ProcessBasicAttack();
 	virtual void ProcessSkillQ();
 	virtual void ProcessSkillE();
+	virtual void ProcessSkillR();
 
 	virtual void ProcessDamage(int32 DamageAmount, int32 RemainingHP); // 피격/사망 처리
 	virtual void ProcessDeath();

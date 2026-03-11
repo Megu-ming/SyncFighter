@@ -273,19 +273,22 @@ void AMyNetworkActor::Tick(float DeltaTime)
 				if (RemotePlayers.Contains(SkillPkt->PlayerID))
 				{
 					ASFCharacter* Caster = RemotePlayers[SkillPkt->PlayerID].Character;
+					FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
 
 					ASFMage* MageChar = Cast<ASFMage>(Caster);
 					if (MageChar)
 					{
-						if (SkillPkt->SkillIndex == 0) // 0번(Q스킬) 이라면!
+						if (SkillPkt->SkillIndex == 0) // 0번 Q스킬
 						{
-							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
 							MageChar->PlayRemoteSkillQ(TargetLoc);
 						}
-						else
+						else if(SkillPkt->SkillIndex == 1)	// 1번 E스킬
 						{
-							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
 							MageChar->PlayRemoteSkillE(TargetLoc);
+						}
+						else // 2번 R스킬
+						{
+							MageChar->PlayRemoteSkillR(TargetLoc);
 						}
 					}
 					else
@@ -293,12 +296,15 @@ void AMyNetworkActor::Tick(float DeltaTime)
 						ASFWarrior* WarriorChar = Cast<ASFWarrior>(Caster);
 						if (SkillPkt->SkillIndex == 0)
 						{
-							FVector TargetLoc(SkillPkt->TargetX, SkillPkt->TargetY, SkillPkt->TargetZ);
 							WarriorChar->PlayRemoteSkillQ(TargetLoc);
+						}
+						else if(SkillPkt->SkillIndex == 1)
+						{
+							WarriorChar->PlayRemoteSkillE(TargetLoc);
 						}
 						else
 						{
-							WarriorChar->ProcessSkillE();
+							WarriorChar->ProcessSkillR();
 						}
 					}
 				}

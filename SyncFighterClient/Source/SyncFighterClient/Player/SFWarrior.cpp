@@ -114,6 +114,55 @@ void ASFWarrior::ProcessSkillQ()
 
 void ASFWarrior::ProcessSkillE()
 {
+	CancelAiming();
+	Super::ProcessSkillE();
+
+	if (bIsWeaponThrown)
+	{
+		if (SkillE_NoSword) PlayAnimMontage(SkillE_NoSword, 1.0f);
+
+		if (IsLocallyControlled())
+		{
+			// 데미지 판정 액터 스폰
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+			SpawnParams.Instigator = this;
+			SkillEActor = GetWorld()->SpawnActor<AActor>(SkillEActorClass, GroundedSword->GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
+
+			// 서버로 스킬 사용 제보
+			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+			if (GI)
+			{
+				GI->SendSkillPacket(1, GroundedSword->GetActorLocation());
+				UE_LOG(LogTemp, Warning, TEXT("[전사] 쾅 맨손 E스킬 시전!"));
+			}
+		}
+	}
+	else
+	{
+		if (SkillE_SwordInHand) PlayAnimMontage(SkillE_SwordInHand, 1.0f);
+
+		if (IsLocallyControlled())
+		{
+			// 데미지 판정 액터 스폰
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+			SpawnParams.Instigator = this;
+			SkillEActor = GetWorld()->SpawnActor<AActor>(SkillEActorClass, GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
+
+			// 서버로 스킬 사용 제보
+			USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+			if (GI)
+			{
+				GI->SendSkillPacket(1, GetActorLocation());
+				UE_LOG(LogTemp, Warning, TEXT("[전사] 쾅 E스킬 시전!"));
+			}
+		}
+	}
+}
+
+void ASFWarrior::ProcessSkillR()
+{
 	// 1. 조준 중이었다면 취소
 	CancelAiming();
 
@@ -122,26 +171,25 @@ void ASFWarrior::ProcessSkillE()
 	if (bIsWeaponThrown)
 	{
 		// 1. 칼이 바닥에 있을 때: 기 모으기(Intro)만 재생하고 기다립니다.
-		if (SkillEIntroMontage)
+		if (SkillRIntroMontage)
 		{
-			PlayAnimMontage(SkillEIntroMontage, 1.0f);
+			PlayAnimMontage(SkillRIntroMontage, 1.0f);
 		}
 	}
 	else
 	{
 		// 2. 칼이 내 손에 있을 때: 텔레포트 없이 제자리에서 바로 크게 휘두릅니다.
-		if (SkillEMontage)
+		if (SkillRMontage)
 		{
-			PlayAnimMontage(SkillEMontage, 1.0f);
+			PlayAnimMontage(SkillRMontage, 1.0f);
 		}
 	}
 
-	// 3. 패킷은 E를 누른 즉시 무조건 보냅니다! (서버도 똑같이 애니메이션을 틀어야 하니까요)
 	USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
 	if (GI && IsLocallyControlled())
 	{
-		GI->SendSkillPacket(1, GetActorLocation());
-		UE_LOG(LogTemp, Warning, TEXT("[전사] E스킬 시전 패킷 전송!"));
+		GI->SendSkillPacket(2, GetActorLocation());
+		UE_LOG(LogTemp, Warning, TEXT("[전사] 궁극기 시전 패킷 전송!"));
 	}
 }
 
@@ -151,49 +199,17 @@ void ASFWarrior::PlayRemoteSkillQ(FVector TargetLoc)
 	if (SkillQMontage) PlayAnimMontage(SkillQMontage, 1.0f);
 }
 
-void ASFWarrior::ApplySkillQDamage()
+void ASFWarrior::PlayRemoteSkillE(FVector TargetLoc)
 {
-	bIsWeaponThrown = true;
-
-	if (SkillQMagicClass)
+	if (bIsWeaponThrown)
 	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.Instigator = this;
-		GroundedSword = GetWorld()->SpawnActor<AActor>(SkillQMagicClass, SkillQTargetLoc, FRotator::ZeroRotator, SpawnParams);
+		if (SkillE_NoSword) PlayAnimMontage(SkillE_NoSword, 1.0f);
 	}
-
-	if (!IsLocallyControlled()) return;
-
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
-
-	TArray<AActor*> OutActors; // 맞은 애들이 담길 임시 명단
-
-	// ★ 핵심: ActorsToIgnore 대신, 이미 나 자신이 포함된 HitActors 명부를 그대로 넘겨줍니다!
-	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
-		GetWorld(), SkillQTargetLoc, 400.0f, ObjectTypes, nullptr, HitActors, OutActors
-	);
-
-	if (bHit)
+	else
 	{
-		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-		if (GI)
-		{
-			// 명단에 있는 모든 적의 체력을 깎으라고 서버에 제보!
-			for (AActor* HitActor : OutActors)
-			{
-				ASFCharacter* HitChar = Cast<ASFCharacter>(HitActor);
-				if (HitChar && !HitActors.Contains(HitChar))
-				{
-					HitActors.Add(HitChar);
-
-					GI->SendHitReq(HitChar->PlayerID, 50); // 번개 강타 데미지 (50)
-					UE_LOG(LogTemp, Warning, TEXT("[전사] 번개 강타 적중! 대상 ID: %d"), HitChar->PlayerID);
-				}
-			}
-		}
+		if (SkillE_SwordInHand) PlayAnimMontage(SkillE_SwordInHand, 1.0f);
 	}
+	GetWorld()->SpawnActor<AActor>(SkillERemoteClass, TargetLoc, FRotator::ZeroRotator);
 }
 
 void ASFWarrior::BeginMeleeAttack()
@@ -238,6 +254,89 @@ void ASFWarrior::CheckMeleeHit()
 	}
 }
 
+void ASFWarrior::ApplySkillQDamage()
+{
+	bIsWeaponThrown = true;
+
+	if (SkillQMagicClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = this;
+		GroundedSword = GetWorld()->SpawnActor<AActor>(SkillQMagicClass, SkillQTargetLoc, FRotator::ZeroRotator, SpawnParams);
+	}
+
+	if (!IsLocallyControlled()) return;
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+	TArray<AActor*> OutActors; // 맞은 애들이 담길 임시 명단
+
+	// ActorsToIgnore 대신, 이미 나 자신이 포함된 HitActors 명부를 그대로 넘겨줍니다!
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		GetWorld(), SkillQTargetLoc, 400.0f, ObjectTypes, nullptr, HitActors, OutActors
+	);
+
+	if (bHit)
+	{
+		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+		if (GI)
+		{
+			// 명단에 있는 모든 적의 체력을 깎으라고 서버에 제보!
+			for (AActor* HitActor : OutActors)
+			{
+				ASFCharacter* HitChar = Cast<ASFCharacter>(HitActor);
+				if (HitChar && !HitActors.Contains(HitChar))
+				{
+					HitActors.Add(HitChar);
+
+					GI->SendHitReq(HitChar->PlayerID, 50); // 번개 강타 데미지 (50)
+					UE_LOG(LogTemp, Warning, TEXT("[전사] 번개 강타 적중! 대상 ID: %d"), HitChar->PlayerID);
+				}
+			}
+		}
+	}
+}
+
+void ASFWarrior::ApplySkillRDamage()
+{
+	if (!IsLocallyControlled()) return;
+	FVector DamageLoc = GetActorLocation(); // 내 캐릭터의 현재 위치 (텔레포트를 했다면 적진 한가운데!)
+	float DamageRadius = 400.0f;
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+
+	TArray<AActor*> OutActors;
+
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		GetWorld(), DamageLoc, DamageRadius, ObjectTypes, nullptr, ActorsToIgnore, OutActors
+	);
+
+	if (bHit)
+	{
+		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
+		if (GI)
+		{
+			for (AActor* HitActor : OutActors)
+			{
+				ASFCharacter* HitChar = Cast<ASFCharacter>(HitActor);
+				// 찾은 액터가 캐릭터이고, 나 자신이 아니라면?
+				if (HitChar && HitChar != this)
+				{
+					// 서버로 묵직한 데미지(예: 60)를 꽂아 넣으라고 제보합니다!
+					GI->SendHitReq(HitChar->PlayerID, 60);
+					UE_LOG(LogTemp, Warning, TEXT("[전사] 궁극기 적중! 대상 ID: %d"), HitChar->PlayerID);
+				}
+			}
+		}
+	}
+}
+
 /// <summary>
 /// 조준(스킬 시전 전) 동작 해제 함수
 /// </summary>
@@ -262,7 +361,7 @@ void ASFWarrior::RecallWeapon()
 	if (bIsWeaponThrown && !bIsRecalled)
 	{
 		bIsRecalled = true;
-		
+
 		if (RecallWeaponMontage) PlayAnimMontage(RecallWeaponMontage);
 		if (GroundedSword)
 		{
@@ -295,46 +394,8 @@ void ASFWarrior::Teleport()
 
 	UE_LOG(LogTemp, Warning, TEXT("[전사] 텔레포트 완료! 휘두르기 공격 연계 시작!"));
 
-	if (SkillEMontage)
+	if (SkillRMontage)
 	{
-		PlayAnimMontage(SkillEMontage, 1.0f);
-	}
-}
-
-void ASFWarrior::ApplySkillEDamage()
-{
-	if (!IsLocallyControlled()) return;
-	FVector DamageLoc = GetActorLocation(); // 내 캐릭터의 현재 위치 (텔레포트를 했다면 적진 한가운데!)
-	float DamageRadius = 400.0f;
-
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
-
-	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(this);
-
-	TArray<AActor*> OutActors;
-
-	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
-		GetWorld(), DamageLoc, DamageRadius, ObjectTypes, nullptr, ActorsToIgnore, OutActors
-	);
-
-	if (bHit)
-	{
-		USFGameInstance* GI = Cast<USFGameInstance>(GetGameInstance());
-		if (GI)
-		{
-			for (AActor* HitActor : OutActors)
-			{
-				ASFCharacter* HitChar = Cast<ASFCharacter>(HitActor);
-				// 찾은 액터가 캐릭터이고, 나 자신이 아니라면?
-				if (HitChar && HitChar != this)
-				{
-					// 서버로 묵직한 데미지(예: 60)를 꽂아 넣으라고 제보합니다!
-					GI->SendHitReq(HitChar->PlayerID, 60);
-					UE_LOG(LogTemp, Warning, TEXT("[전사] E스킬 광역 폭발 적중! 대상 ID: %d"), HitChar->PlayerID);
-				}
-			}
-		}
+		PlayAnimMontage(SkillRMontage, 1.0f);
 	}
 }

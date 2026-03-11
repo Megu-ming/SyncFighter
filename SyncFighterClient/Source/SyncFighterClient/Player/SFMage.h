@@ -22,6 +22,8 @@ public:
 	void PlayRemoteSkillQ(FVector TargetLoc);
 	virtual void ProcessSkillE() override;
 	void PlayRemoteSkillE(FVector TargetLoc);
+	virtual void ProcessSkillR() override;
+	void PlayRemoteSkillR(FVector TargetLoc);
 
 	// --- [투사체(마법) 블루프린트 할당 칸] ---
 	UPROPERTY(EditAnywhere, Category = "Combat|Magic")
@@ -33,7 +35,6 @@ public:
 	// --- [마법 시전 애니메이션 칸] ---
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillQMontage;
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	TSubclassOf<AActor> SkillIndicatorClass;
@@ -48,18 +49,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillEMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillRMontage;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Magic")
-	TSubclassOf<class AActor> SkillEMagicClass;
+	TSubclassOf<class AActor> SkillRMagicClass;
 
 	FVector SkillQTargetLoc;
-	FVector SkillETargetLoc;
+	FVector SkillRTargetLoc;
 
 	// 애니메이션 노티파이에서 호출할 실제 액터 스폰 함수
 	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
 	void SpawnSkillQMagic();
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")
-	void SpawnSkillEMagic();
+	void SpawnSkillRMagic();
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Magic")

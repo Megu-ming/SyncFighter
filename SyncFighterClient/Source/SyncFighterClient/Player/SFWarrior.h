@@ -20,13 +20,9 @@ public:
 	virtual void ProcessBasicAttack() override;
 	virtual void ProcessSkillQ() override;
 	virtual void ProcessSkillE() override;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
-	UAnimMontage* SkillEMontage;
+	virtual void ProcessSkillR() override;
 
 #pragma region Q스킬 관련
-	// Q 스킬 변수 및 함수
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
 	UAnimMontage* SkillQMontage;
@@ -68,16 +64,35 @@ public:
 	bool bIsRecalled = false;
 #pragma endregion
 
-public:
 #pragma region E스킬 관련
-	// E스킬 몽타주에서 호출할 함수
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
-	UAnimMontage* SkillEIntroMontage;
+	UAnimMontage* SkillE_NoSword;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillE_SwordInHand;
+
+	void PlayRemoteSkillE(FVector TargetLoc);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	TSubclassOf<AActor> SkillEActorClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+	TSubclassOf<AActor> SkillERemoteClass;
+	UPROPERTY()
+	AActor* SkillEActor;
+#pragma endregion
+
+public:
+#pragma region R스킬 관련
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillRIntroMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Montages")
+	UAnimMontage* SkillRMontage;
+
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void Teleport();
 
 	UFUNCTION(BlueprintCallable, Category = "Skill")
-	void ApplySkillEDamage();
+	void ApplySkillRDamage();
 #pragma endregion
 
 #pragma region 기본공격 관련
